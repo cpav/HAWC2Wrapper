@@ -783,7 +783,7 @@ class HAWC2SInputWriter(HAWC2InputWriter):
                             opt_vt.induction, opt_vt.gradients))
 
             elif name == 'compute_stability_analysis':
-                cmd.append(('compute_stability_analysis %s %s %i'+4*'%12.6e' +
+                cmd.append(('compute_stability_analysis %s %s %i'+4*' %12.6e' +
                            ' %s') % (opt_vt.matrixwriteout,
                                      opt_vt.eigenvaluewriteout,
                                      opt_vt.number_of_modes,
@@ -841,7 +841,8 @@ class HAWC2SInputWriter(HAWC2InputWriter):
         if 'compute_optimal_pitch_angle' not in h2s.commands:
 
             data = np.array([h2s.wsp_curve, h2s.pitch_curve, h2s.rpm_curve]).T
-
+            if len(data.shape) == 1:
+                data = np.array([data])
             fid = open(self.case_id + '.opt', 'w')
             fid.write(('%i Wind speed [m/s]          Pitch [deg]     ' +
                       'Rot. speed [rpm]\n') % data.shape[0])
