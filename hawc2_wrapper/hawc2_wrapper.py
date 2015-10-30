@@ -41,7 +41,7 @@ class HAWC2Wrapper(object):
     -------
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(HAWC2Wrapper, self).__init__()
 
         self.hawc2bin = 'hawc2MB.exe'
@@ -59,6 +59,12 @@ class HAWC2Wrapper(object):
         self.dry_run = False
 
         self.basedir = os.getcwd()
+
+        for k, w in kwargs.iteritems():
+            try:
+                setattr(self, k, w)
+            except:
+                pass
 
     def compute(self):
 

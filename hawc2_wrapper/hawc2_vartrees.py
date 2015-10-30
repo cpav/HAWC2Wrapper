@@ -35,10 +35,10 @@ class HAWC2BladeGeometry(object):
     def __init__(self):
         self.radius = 0.0
         self.s = zeros([1])  # Running length along blade axis
-        self.c12axis = zeros([1])  # Pitch axis of blade
+        #self.c12axis = zeros([1])  # Pitch axis of blade
         self.chord = zeros([1])  # Blade chord
         self.rthick = zeros([1])  # Blade relative thickness
-        self.twist = zeros([1])  # Blade twist (positive nose up!)
+        #self.twist = zeros([1])  # Blade twist (positive nose up!)
         self.aeset = zeros([1])  # Airfoil set
 
 
@@ -695,7 +695,6 @@ class HAWC2VarTrees(object):
         self.aero = HAWC2Aero()
         self.aerodrag = HAWC2AeroDrag()
         self.blade_ae = HAWC2BladeGeometry()
-        self.blade_structure = []
         self.airfoildata = HAWC2AirfoilData()
         self.output = HAWC2OutputVT()
         self.rotor = RotorVT()

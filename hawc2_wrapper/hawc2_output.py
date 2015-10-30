@@ -339,45 +339,45 @@ class HAWC2SOutput(HAWC2SOutputBase):
 
     returns
     -------
-    wsp : array
+    wsp : array [nW]
         Wind speed [m/s].
-    pitch : array
+    pitch : array [nW]
         Pitch angle [deg].
-    rpm : array
+    rpm : array [nW]
         Rotational speed [rpm].
-    P : array
+    P : array [nW]
         Aerodynamic power [W].
-    Q : array
+    Q : array [nW]
         Aerodynamic torque [Nm].
-    T : array
+    T : array [nW]
         Thrust [N].
-    CP : array
+    CP : array [nW]
         Power coefficient [-].
-    CT : array
+    CT : array [nW]
         Thrust coefficient [-].
-    Mx : array
+    Mx : array [nW]
         Blade root in-plane bending moment [Nm].
-    My : array
+    My : array [nW]
         Blade root out-of-plane bending moment [Nm].
-    Mz : array
+    Mz : array [nW]
         Blade root torsional moment [Nm].
-    tip_pos : array
+    tip_pos : array [nW]
         Blade tip position [m].
-    tip_rot : array
+    tip_rot : array [nW]
         Blade tip rotation [deg].
-    disp_x : array
+    disp_x : array [nW]
         In plane blade deflection [m].
-    disp_y : array
+    disp_y : array [nW]
         Out of plane blade deflection [m].
-    disp_z : array
+    disp_z : array [nW]
         Blade deflection along the blade axis [m].
-    disp_rot_z : array
+    disp_rot_z : array [nW]
         Blade sections rotation [deg].
-    s: array
+    s: array [nS]
         Position of radial sections [-].
     aoa : array [nW, nS]
         Sections angle of attack  [deg].
-    Ft : array
+    Ft : array [nW, nS]
         Sections tangential force [N].
     Fn : array [nW, nS]
         Sections normal force  [N].
@@ -395,13 +395,20 @@ class HAWC2SOutput(HAWC2SOutputBase):
         Axial induced velocity [m/s].
     v_t : array [nW, nS]
         Tangential induced velocity [m/s].
-    Fx : array
+    Fx : array [nW, nS]
         Integrated lateral force [N].
-    Fy : array
+    Fy : array [nW, nS]
         Intagrated longitudinal force [N].
+    outlist : list
+        List with the names of all the outputs
     """
     def __init__(self):
         super(HAWC2SOutput, self).__init__()
+        self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT', 'Mx',
+                        'My', 'Mz', 'tip_rot', 'Fx', 'Fy']
+        self.outlist2 = ['aoa', 'Ft', 'Fn', 'cl', 'cd', 'cm', 'ct', 'cp',
+                         'v_a', 'v_t', 'disp_x', 'disp_y',
+                        'disp_z', 'disp_rot_z']
 
     def execute(self):
         if ('save_power' not in self.commands) or \
@@ -429,7 +436,6 @@ class HAWC2SOutput(HAWC2SOutputBase):
         nW = len(self.wsp)
         nS = len(self.blade_loads_data[0][:, 0])
 
-        self.tip_pos = np.zeros((nW, 3))
         self.tip_rot = np.zeros(nW)
         self.disp_x = np.zeros((nW, nS))
         self.disp_y = np.zeros((nW, nS))
@@ -472,7 +478,6 @@ class HAWC2SOutput(HAWC2SOutputBase):
             self.disp_y[iw, :] = main_axis[:, 1]
             self.disp_z[iw, :] = main_axis[:, 2]
             self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
-            self.tip_pos[iw, :] = main_axis[-1, :]
             self.tip_rot[iw] = np.interp(0.98,
                                          self.s, data[:, 28] * 180. / np.pi)
 

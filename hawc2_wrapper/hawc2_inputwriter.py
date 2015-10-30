@@ -173,7 +173,7 @@ class HAWC2InputWriter(object):
     -------
         nothing
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
 
         self.case_id = 'hawc2_case'
         self.vartrees = HAWC2VarTrees()
@@ -183,6 +183,12 @@ class HAWC2InputWriter(object):
         self.turb_directory = 'turb'
         self.log_directory = 'logfile'
         self.control_directory = 'control'
+
+        for k, w in kwargs.iteritems():
+            try:
+                setattr(self, k, w)
+            except:
+                pass
 
         if not os.path.exists(self.data_directory):
             os.mkdir(self.data_directory)
@@ -716,8 +722,14 @@ class HAWC2SInputWriter(HAWC2InputWriter):
     -------
         nothing
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(HAWC2SInputWriter, self).__init__()
+
+        for k, w in kwargs.iteritems():
+            try:
+                setattr(self, k, w)
+            except:
+                pass
 
     def execute(self):
 

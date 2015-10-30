@@ -26,8 +26,8 @@ class HAWC2InputReader(object):
     vartrees: HAWC2VarTrees
         Variable tree with all the information of the model.
     """
-    def __init__(self):
-        self.htc_master_file = 'hawc_master.htc'
+    def __init__(self, htc_master_file='hawc_master.htc'):
+        self.htc_master_file = htc_master_file
         self.htc = []
         self.vartrees = HAWC2VarTrees()
 
@@ -61,15 +61,13 @@ class HAWC2InputReader(object):
                 self.vartrees.rotor.nblades = iblade-1
                 break
 
-        # copy blade twist from c2_def to blade_ae vartree
-        if hasattr(self.vartrees.main_bodies, 'blade1'):
-            c12 = self.vartrees.main_bodies.blade1.c12axis
-            tck = pchip(c12[:, 2], c12[:, 3])
-            twist = tck(self.vartrees.blade_ae.s)
-            self.vartrees.blade_ae.twist = twist
-            self.vartrees.blade_ae.c12axis = c12.copy()
-            self.vartrees.blade_structure = \
-                self.vartrees.main_bodies.blade1.beam_structure
+        # copy blade twist from c2_def to blade_ae vartree # FIXME: dont like things defined twice
+        #if hasattr(self.vartrees.main_bodies, 'blade1'):
+        #    c12 = self.vartrees.main_bodies.blade1.c12axis
+        #    tck = pchip(c12[:, 2], c12[:, 3])
+        #    twist = tck(self.vartrees.blade_ae.s)
+        #    self.vartrees.blade_ae.twist = twist
+        #    self.vartrees.blade_ae.c12axis = c12.copy()
 
     def set_entry(self, vt, section, name, h2name=None, required=False):
 
