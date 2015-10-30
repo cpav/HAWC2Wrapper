@@ -8,76 +8,11 @@ from hawc2_inputwriter import HAWC2SInputWriter
 from hawc2_wrapper import HAWC2Wrapper
 from hawc2_output import HAWC2SOutput
 from hawc2_geomIDO import HAWC2GeometryBuilder
-#class MakeCases(Component):
-#    """
-#    build case vartrees
-#
-#    inputs
-#    -------
-#
-#    wsp: array-like
-#        array of wind speeds for which to compute loads under normal operational conditions
-#    user_cases: list of dict
-#        list of off design cases e.g. stand still extreme wind conditions. the syntax is:
-#        {"wsp": 70, "pitch": 0., "rpm": 0.001}
-#
-#    outputs
-#    --------
-#    cases: list of vartrees
-#    case_ids: list of case_ids
-#    """
-#
-#    vartrees = VarTree(HAWC2VarTrees(), iotype='in')
-#    wsp = Array(iotype='in', desc='array of wind speeds for which to compute the power curve')
-#    user_cases = List(iotype='in', desc='List of user defined off-design cases containing'
-#                                        'the format is a list of dictionaries with e.g.:'
-#                                        '{"wsp": 70, "pitch": 0., "rpm": 0.001}')
-#
-#    cases = List(iotype='out')
-#    case_ids = List(iotype='out')
-#
-#    def execute(self):
-#
-#        self.cases = []
-#        self.case_ids = []
-#        for w in self.wsp:
-#            vt = self.vartrees.copy()
-#            vt.h2s.wsp_cases = [w]
-#            self.cases.append(vt)
-#            self.case_ids.append('wsp_%2.2f' % w)
-#
-#        for i, case in enumerate(self.user_cases):
-#            vt = self.vartrees.copy()
-#            vt.h2s.cases = [case]
-#            vt.h2s.wsp_cases = []
-#            if 'pitch' in case:
-#                try:
-#                    vt.h2s.commands.remove('compute_optimal_pitch_angle')
-#                except:
-#                    pass
-#
-#            if case['rpm'] < 0.1:
-#                try:
-#                    vt.h2s.commands.remove('compute_optimal_pitch_angle')
-#                except:
-#                    pass
-#                try:
-#                    vt.h2s.commands.remove('compute_stability_analysis')
-#                except:
-#                    pass
-#                try:
-#                    vt.h2s.commands.remove('compute_structural_modal_analysis')
-#                except:
-#                    pass
-#                vt.h2s.options.induction = 'noinduction'
-#                vt.h2s.options.tipcorrect = 'notipcorrect'
-#            self.cases.append(vt)
-#            self.case_ids.append('user_%i' % i)
-#
+
 
 class HAWC2SWorkflow(Component):
 
-    def __init__(self, config, case_id, cs_size, pfsize):
+    def __init__(self, config, case_id, case, cs_size, pfsize):
         super(HAWC2SWorkflow, self).__init__()
         self.with_structure = config['with_structure']
         self.with_geom = config['with_geom']
@@ -90,19 +25,25 @@ class HAWC2SWorkflow(Component):
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
+
+        nws = self._check_cases(self.writer.vartrees, case_id, case)
         
         self.wrapper = HAWC2Wrapper(**config['HAWC2Wrapper'])
         self.wrapper.case_id = case_id
-        ns = self.writer.vartrees.aero.aerosections-2
-        nws = self.writer.vartrees.dlls.risoe_controller.dll_init.nV
+        naes = self.writer.vartrees.aero.aerosections-2
+
         self.output = HAWC2SOutput()
         self.output.case_id = case_id
         self.output.commands = self.reader.vartrees.h2s.commands
-        for name in self.output.outlist1:
+
+        self.output_list = []
+        for name in config['HAWC2SOutputs']['rotor']:
             self.add_output(name, np.zeros(nws))
-        for name in self.output.outlist2:
-            self.add_output(name, np.zeros([nws, ns]))
-            
+            self.output_list.append(name)
+        for name in config['HAWC2SOutputs']['blade']:
+            self.add_output(name, np.zeros([nws, naes]))
+            self.output_list.append(name)
+
         if self.with_structure:
             self.add_param('cs_props', np.zeros(cs_size))
 
@@ -137,16 +78,11 @@ class HAWC2SWorkflow(Component):
 
         self.writer.execute()
 
-        #self.wrapper.case_id = case_id
         self.wrapper.compute()
 
         self.output.execute()
 
-        for name in self.output.outlist1:
-            print name
-            unknowns[name] = getattr(self.output, name)
-        for name in self.output.outlist2:
-            print name
+        for name in self.output_list:
             unknowns[name] = getattr(self.output, name)
 
     def _array2bladegeometry(bladegeom, pfIn):
@@ -218,26 +154,34 @@ class HAWC2SWorkflow(Component):
             body.beam_structure[bset].K_56 = body_st[:, 28]
             body.beam_structure[bset].K_66 = body_st[:, 29]
 
-    def array2hawc2bladegeometry(blade_ae, blade_geom):
+    def _check_cases(self, vt, case_id, case):
+        
 
-            blade_ae.s = blade_geom[:, 0]
-            blade_ae.chord = blade_geom[:, 1]
-            blade_ae.rthick = blade_geom[:, 2]
+        if 'user' not in case_id:
+            if isinstance(case, int):
+                vt.dlls.risoe_controller.dll_init.Vin = case
+                vt.dlls.risoe_controller.dll_init.Vout = case
+                vt.dlls.risoe_controller.dll_init.nV = 1
+            else:
+                vt.dlls.risoe_controller.dll_init.Vin = case[0]
+                vt.dlls.risoe_controller.dll_init.Vout = case[-1]
+                vt.dlls.risoe_controller.dll_init.nV = len(case)
+            nws = vt.dlls.risoe_controller.dll_init.nV
+        
+        else:
 
-    def check_options(vt):
-            vt.h2s.cases = [case]
-            vt.h2s.wsp_cases = []
-            if 'pitch' in case:
-                try:
-                    vt.h2s.commands.remove('compute_optimal_pitch_angle')
-                except:
-                    pass
+            vt.h2s.wsp_curve = case['wsp']
+            vt.h2s.pitch_curve = case['pitch']
+            vt.h2s.rpm_curve = case['rpm']
 
-            if case['rpm'] < 0.1:
-                try:
-                    vt.h2s.commands.remove('compute_optimal_pitch_angle')
-                except:
-                    pass
+            if isinstance(vt.h2s.wsp_curve, int):
+                nws = 1
+            else:
+                nws = len(vt.h2s.wsp_curve)
+            
+            vt.h2s.commands.remove('compute_optimal_pitch_angle')
+    
+            if np.min(vt.h2s.rpm_curve) < 0.1:
                 try:
                     vt.h2s.commands.remove('compute_stability_analysis')
                 except:
@@ -248,7 +192,7 @@ class HAWC2SWorkflow(Component):
                     pass
                 vt.h2s.options.induction = 'noinduction'
                 vt.h2s.options.tipcorrect = 'notipcorrect'
-
+        return nws
 
 class HAWC2SAeroElasticSolver(Group):
     """
@@ -273,26 +217,27 @@ class HAWC2SAeroElasticSolver(Group):
     radius: float
         blade length
     """
-    def __init__(self, config, vartrees):
+    def __init__(self, config, cs_size, pfsize):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
-
+        cases = {}
+        cases_list = []
+        for ws in config['cases']['wsp']:
+            name = 'wsp_%2.2f' % ws
+            cases[name.replace('.', '_')] = ws
+            cases_list.append(name.replace('.', '_'))
+        for icase, case in enumerate(config['cases']['users']):
+            name = 'user_%i' % icase
+            cases[name] = case
+            cases_list.append(name)
 
         cid = self.add('cid', ParallelGroup())
 
-        for w in self.cases:
-            case_id = 'wsp_%2.2f' % w
-            cid.add(case_id, HAWC2SWorkflow(config, case_id, cs_size, pfsize))
-            if config['with_structure']:
-                self.add('cs_props_c', IndepVarComp('cs_props', cs_props), promotes=['*'])
-            if config['with_structure']:
-                self.add('blade_length_c', IndepVarComp('blade_length', blade_length), promotes=['*'])
-                self.add('blade_span_ni_c', IndepVarComp('blade_span_ni', blade_span_ni), promotes=['*'])
-                self.add('pfIn_c', IndepVarComp('pfIn', pfIn), promotes=['*'])
+        for i, case in enumerate(cases_list):
 
-            
-            # create connections
+            cid.add(case, HAWC2SWorkflow(config, case, case_id, cs_size, pfsize))
 
+            self.connect()
 
 
 #

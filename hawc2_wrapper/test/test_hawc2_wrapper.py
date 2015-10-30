@@ -106,8 +106,9 @@ class TestHAWC2SWorkflow(object):
       
         root = Group()
         #root.add('indep_var', IndepVarComp('x', 7.0))
-        case = {'wsp': 5, 'pitch': 8, 'rpm': 0.001}
-        root.add('my_comp', HAWC2SWorkflow(config, 'user_id', case, 0, 0))
+        #case = {'wsp': [5, 6], 'pitch': [8, 54], 'rpm': [0.001, 1]}
+        case = [3, 4 ,5 ,67 ,8]
+        root.add('my_comp', HAWC2SWorkflow(config, 'ws_id', case, 0, 0))
         #root.connect('indep_var.x', 'my_comp.x_input')
         root.my_comp.writer.vartrees.h2s.options.include_torsiondeform = 0
         root.my_comp.writer.vartrees.h2s.options.bladedeform = 'nobladedeform'
@@ -171,7 +172,7 @@ if __name__ == '__main__':
     print 'Test 4'
     t4 = TestHAWC2SWorkflow()
     #t4.run()
-
+    
     print 'Test 5'
     t5 = TestHAWC2SAeroElasticSolver()
     t5.run()
