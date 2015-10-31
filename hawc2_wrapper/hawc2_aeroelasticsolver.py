@@ -27,7 +27,7 @@ class HAWC2SWorkflow(Component):
         self.writer.case_id = case_id
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)
-        
+
         self.wrapper = HAWC2Wrapper(**config['HAWC2Wrapper'])
         self.wrapper.case_id = case_id
         naes = self.writer.vartrees.aero.aerosections-2
@@ -155,7 +155,7 @@ class HAWC2SWorkflow(Component):
             body.beam_structure[bset].K_66 = body_st[:, 29]
 
     def _check_cases(self, vt, case_id, case):
-        
+
 
         if 'user' not in case_id:
             if isinstance(case, int):
@@ -167,7 +167,7 @@ class HAWC2SWorkflow(Component):
                 vt.dlls.risoe_controller.dll_init.Vout = case[-1]
                 vt.dlls.risoe_controller.dll_init.nV = len(case)
             nws = vt.dlls.risoe_controller.dll_init.nV
-        
+
         else:
 
             vt.h2s.wsp_curve = case['wsp']
@@ -178,9 +178,9 @@ class HAWC2SWorkflow(Component):
                 nws = 1
             else:
                 nws = len(vt.h2s.wsp_curve)
-            
+
             vt.h2s.commands.remove('compute_optimal_pitch_angle')
-    
+
             if np.min(vt.h2s.rpm_curve) < 0.1:
                 try:
                     vt.h2s.commands.remove('compute_stability_analysis')
@@ -193,6 +193,38 @@ class HAWC2SWorkflow(Component):
                 vt.h2s.options.induction = 'noinduction'
                 vt.h2s.options.tipcorrect = 'notipcorrect'
         return nws
+
+
+class OutputsAggregator(Component):
+    """
+    """
+    def __init__(self, config, nws, naes):
+        super(OutputsAggregator, self).__init__()
+
+        self.nws = nws
+        self.sensor_rotor = []
+        for sensor in config['HAWC2SOutputs']['rotor']:
+            self.sensor_rotor.append(sensor)
+            self.add_output(sensor, np.array([nws, 1]))
+            for i in range(nws):
+                self.add_param('%s_%i' % (sensor, i), np.array([1, 1]))
+
+        self.sensor_blade = []
+        for sensor in config['HAWC2SOutputs']['blade']:
+            self.sensor_blade.append(sensor)
+            self.add_output(sensor, np.array([nws, naes]))
+            for i in range(nws):
+                self.add_param('%s_%i' % (sensor, i), np.array([1, naes]))
+
+    def solve_nonlinear(self, params, unknowns, resids):
+
+        for sensor in self.sensor_rotor:
+            for i in range(self.nws):
+                unknowns[sensor][i, 0] = params['%s_%i' % (sensor, i)]
+        for sensor in self.sensor_blade:
+            for i in range(self.nws):
+                unknowns[sensor][i, :] = params['%s_%i' % (sensor, i)]
+
 
 class HAWC2SAeroElasticSolver(Group):
     """
@@ -217,7 +249,7 @@ class HAWC2SAeroElasticSolver(Group):
     radius: float
         blade length
     """
-    def __init__(self, config, cs_size, pfsize):
+    def __init__(self, config, cs_size, pfsize, naes):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
         cases = {}
@@ -226,19 +258,23 @@ class HAWC2SAeroElasticSolver(Group):
             name = 'wsp_%2.2f' % ws
             cases[name.replace('.', '_')] = ws
             cases_list.append(name.replace('.', '_'))
-        for icase, case in enumerate(config['cases']['users']):
+        for icase, case in enumerate(config['cases']['user']):
             name = 'user_%i' % icase
             cases[name] = case
             cases_list.append(name)
 
+        self.add('aggregate', OutputsAggregator(config, len(cases_list), naes))
         cid = self.add('cid', ParallelGroup())
+        
+        for i, case_id in enumerate(cases_list):
+            cid.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id], cs_size, pfsize))
 
-        for i, case in enumerate(cases_list):
-
-            cid.add(case, HAWC2SWorkflow(config, case, case_id, cs_size, pfsize))
-
-            self.connect()
-
+            for sensor in config['HAWC2SOutputs']['rotor']:
+                self.connect('cid.%s.%s' % (case_id, sensor),
+                             'aggregate.%s_%i'% (sensor, i))
+            for sensor in config['HAWC2SOutputs']['blade']:
+                self.connect('cid.%s.%s' % (case_id, sensor),
+                             'aggregate.%s_%i'% (sensor, i))
 
 #
 #    """
@@ -338,6 +374,6 @@ if __name__ == '__main__':
 
 
 
-        
+
     a = HAWC2SWorkflow(config, 0, 0, 0, 0)
     a.solve_nonlinear()

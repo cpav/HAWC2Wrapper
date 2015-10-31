@@ -284,7 +284,7 @@ begin hawcstab2;
     opt_lambda  8.500000000000000e+00;
     maxpow 1.064162e+04;
     prvs_turbine 1;
-    include_torsiondeform 1;
+    include_torsiondeform 0;
   end operational_data;
   begin controller_tuning;
     partial_load 0.050000 0.700000;
