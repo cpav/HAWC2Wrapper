@@ -482,6 +482,48 @@ class HAWC2SOutput(HAWC2SOutputBase):
                                          self.s, data[:, 28] * 180. / np.pi)
 
 
+class HAWC2SOutputCompact(HAWC2SOutput):
+    """
+    HAWC2SOutput: HAWC2SOutputBase class that organize results in
+    compact arrays to minimize the number of outputs. The outputs are selected
+    with a dictionary passed in the initialization.
+
+    parameters
+    ----------
+
+    returns
+    -------
+    outputs_rotor: array
+        Rotor outputs.
+
+    outputs_blade: array
+        Blade outputs.
+    """
+    def __init__(self, config):
+        super(HAWC2SOutputCompact, self).__init__()
+
+        self.sensor_rotor = []
+        for name in config['rotor']:
+            self.sensor_rotor.append(name)
+        self.sensor_blade = []
+        for name in config['blade']:
+            self.sensor_blade.append(name)
+
+    def execute(self):
+        super(HAWC2SOutputCompact, self).execute()
+
+        nW = len(self.wsp)
+        nS = len(self.blade_loads_data[0][:, 0])
+
+        self.outputs_rotor = np.zeros([nW, len(self.sensor_rotor)])
+        for i, sensor in enumerate(self.sensor_rotor):
+            self.outputs_rotor[:, i] = getattr(self, sensor)
+
+        self.outputs_blade = np.zeros([nW, len(self.sensor_rotor)*nS])
+        for i, sensor in enumerate(self.sensor_blade):
+            self.outputs_blade[:, i*nS:(i+1)*nS] = getattr(self, sensor)
+
+
 class FreqDampTargetByIndex(object):
     """
     Component to compute th cost function for freqeuncies and dampings

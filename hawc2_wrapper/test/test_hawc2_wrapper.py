@@ -116,10 +116,10 @@ class TestHAWC2SWorkflow(object):
         prob.setup()
         prob.run()
         
-        print prob['my_comp.wsp']
-        print prob['my_comp.P']
-        print prob['my_comp.pitch']
-        print prob['my_comp.rpm']
+        print prob['my_comp.outputs_rotor']
+        print prob['my_comp.outputs_blade']
+        #print prob['my_comp.pitch']
+        #print prob['my_comp.rpm']
 
 
 class TestHAWC2SAeroElasticSolver(object):

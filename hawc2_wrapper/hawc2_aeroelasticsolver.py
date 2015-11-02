@@ -6,7 +6,7 @@ from openmdao.api import Component, Group, ParallelGroup, IndepVarComp
 from hawc2_inputreader import HAWC2InputReader
 from hawc2_inputwriter import HAWC2SInputWriter
 from hawc2_wrapper import HAWC2Wrapper
-from hawc2_output import HAWC2SOutput
+from hawc2_output import HAWC2SOutputCompact
 from hawc2_geomIDO import HAWC2GeometryBuilder
 
 
@@ -32,17 +32,14 @@ class HAWC2SWorkflow(Component):
         self.wrapper.case_id = case_id
         naes = self.writer.vartrees.aero.aerosections-2
 
-        self.output = HAWC2SOutput()
+        self.output = HAWC2SOutputCompact(config['HAWC2SOutputs'])
         self.output.case_id = case_id
         self.output.commands = self.reader.vartrees.h2s.commands
 
-        self.output_list = []
-        for name in config['HAWC2SOutputs']['rotor']:
-            self.add_output(name, np.zeros(nws))
-            self.output_list.append(name)
-        for name in config['HAWC2SOutputs']['blade']:
-            self.add_output(name, np.zeros([nws, naes]))
-            self.output_list.append(name)
+        n = len(config['HAWC2SOutputs']['rotor'])
+        self.add_output('outputs_rotor', np.zeros([nws, n]))
+        n = len(config['HAWC2SOutputs']['blade'])
+        self.add_output('outputs_blade', np.zeros([nws, n*naes]))
 
         if self.with_structure:
             self.add_param('cs_props', np.zeros(cs_size))
@@ -82,8 +79,8 @@ class HAWC2SWorkflow(Component):
 
         self.output.execute()
 
-        for name in self.output_list:
-            unknowns[name] = getattr(self.output, name)
+        unknowns['outputs_rotor'] = self.output.outputs_rotor
+        unknowns['outputs_blade'] = self.output.outputs_blade
 
     def _array2bladegeometry(bladegeom, pfIn):
 
@@ -202,28 +199,34 @@ class OutputsAggregator(Component):
         super(OutputsAggregator, self).__init__()
 
         self.nws = nws
+        self.naes = naes
         self.sensor_rotor = []
         for sensor in config['HAWC2SOutputs']['rotor']:
             self.sensor_rotor.append(sensor)
             self.add_output(sensor, np.array([nws, 1]))
-            for i in range(nws):
-                self.add_param('%s_%i' % (sensor, i), np.array([1, 1]))
 
         self.sensor_blade = []
         for sensor in config['HAWC2SOutputs']['blade']:
             self.sensor_blade.append(sensor)
             self.add_output(sensor, np.array([nws, naes]))
-            for i in range(nws):
-                self.add_param('%s_%i' % (sensor, i), np.array([1, naes]))
+
+        n = len(self.sensor_rotor)
+        for i in range(nws):
+            self.add_param('outputs_rotor_%i' % i, np.array([1, n]))
+        n = len(self.sensor_blade)
+        for i in range(nws):
+            self.add_param('outputs_blade_%i' % i, np.array([1, n*naes]))
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        for sensor in self.sensor_rotor:
+        for j, sensor in enumerate(self.sensor_rotor):
             for i in range(self.nws):
-                unknowns[sensor][i, 0] = params['%s_%i' % (sensor, i)]
-        for sensor in self.sensor_blade:
+                out = params['%s_%i' % (sensor, i)]
+                unknowns[sensor][i, 0] = out[:, j]
+        for j, sensor in enumerate(self.sensor_blade):
             for i in range(self.nws):
-                unknowns[sensor][i, :] = params['%s_%i' % (sensor, i)]
+                out = params['%s_%i' % (sensor, i)]
+                unknowns[sensor][i, :] = out[:, j*self.naes, (j+1)*self.naes]
 
 
 class HAWC2SAeroElasticSolver(Group):
@@ -264,17 +267,15 @@ class HAWC2SAeroElasticSolver(Group):
             cases_list.append(name)
 
         self.add('aggregate', OutputsAggregator(config, len(cases_list), naes))
-        cid = self.add('cid', ParallelGroup())
-        
-        for i, case_id in enumerate(cases_list):
-            cid.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id], cs_size, pfsize))
+        pg = self.add('pg', ParallelGroup())
 
-            for sensor in config['HAWC2SOutputs']['rotor']:
-                self.connect('cid.%s.%s' % (case_id, sensor),
-                             'aggregate.%s_%i'% (sensor, i))
-            for sensor in config['HAWC2SOutputs']['blade']:
-                self.connect('cid.%s.%s' % (case_id, sensor),
-                             'aggregate.%s_%i'% (sensor, i))
+        for i, case_id in enumerate(cases_list):
+            pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id], cs_size, pfsize))
+
+            self.connect('pg.%s.outputs_rotor' % case_id,
+                         'aggregate.outputs_rotor_%i' % i)
+            self.connect('pg.%s.outputs_blade' % case_id,
+                         'aggregate.outputs_blade_%i' % i)
 
 #
 #    """
