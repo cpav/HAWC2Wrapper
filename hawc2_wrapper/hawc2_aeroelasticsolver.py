@@ -37,9 +37,9 @@ class HAWC2SWorkflow(Component):
         self.output.commands = self.reader.vartrees.h2s.commands
 
         n = len(config['HAWC2SOutputs']['rotor'])
-        self.add_output('outputs_rotor', np.zeros([nws, n]))
+        self.add_output('outputs_rotor', shape=[nws, n])
         n = len(config['HAWC2SOutputs']['blade'])
-        self.add_output('outputs_blade', np.zeros([nws, n*naes]))
+        self.add_output('outputs_blade', shape=[nws, n*naes])
 
         if self.with_structure:
             self.add_param('cs_props', np.zeros(cs_size))
@@ -48,10 +48,9 @@ class HAWC2SWorkflow(Component):
             self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
             self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
 
-            self.add_param('pfIn', np.zeros([pfsize, 11]))
+            self.add_param('pfIn', shape=[pfsize, 11])
             self.add_param('blade_length', 0.)
             self.add_param('blade_ni_span', 0)
-
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -153,7 +152,6 @@ class HAWC2SWorkflow(Component):
 
     def _check_cases(self, vt, case_id, case):
 
-
         if 'user' not in case_id:
             if isinstance(case, int):
                 vt.dlls.risoe_controller.dll_init.Vin = case
@@ -200,33 +198,40 @@ class OutputsAggregator(Component):
 
         self.nws = nws
         self.naes = naes
+
+        # Add parameters coming from ParallelGroup
+        n = len(config['HAWC2SOutputs']['rotor'])
+        for i in range(nws):
+            p_name = 'outputs_rotor_%d' % i
+            self.add_param(p_name, shape=[1, n])
+        n = len(config['HAWC2SOutputs']['blade'])
+        for i in range(nws):
+            p_name = 'outputs_blade_%d' % i
+            self.add_param(p_name, shape=[1, n*naes])
+
+        # Add outputs
         self.sensor_rotor = []
         for sensor in config['HAWC2SOutputs']['rotor']:
             self.sensor_rotor.append(sensor)
-            self.add_output(sensor, np.array([nws, 1]))
+            self.add_output(sensor, shape=[nws])
 
         self.sensor_blade = []
         for sensor in config['HAWC2SOutputs']['blade']:
             self.sensor_blade.append(sensor)
-            self.add_output(sensor, np.array([nws, naes]))
-
-        n = len(self.sensor_rotor)
-        for i in range(nws):
-            self.add_param('outputs_rotor_%i' % i, np.array([1, n]))
-        n = len(self.sensor_blade)
-        for i in range(nws):
-            self.add_param('outputs_blade_%i' % i, np.array([1, n*naes]))
+            self.add_output(sensor, shape=[nws, naes])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
         for j, sensor in enumerate(self.sensor_rotor):
             for i in range(self.nws):
-                out = params['%s_%i' % (sensor, i)]
-                unknowns[sensor][i, 0] = out[:, j]
+                p_name = 'outputs_rotor_%d' % i
+                out = params[p_name]
+                unknowns[sensor][i] = out[0, j]
         for j, sensor in enumerate(self.sensor_blade):
             for i in range(self.nws):
-                out = params['%s_%i' % (sensor, i)]
-                unknowns[sensor][i, :] = out[:, j*self.naes, (j+1)*self.naes]
+                p_name = 'outputs_blade_%d' % i
+                out = params[p_name]
+                unknowns[sensor][i, :] = out[0, j*self.naes:(j+1)*self.naes]
 
 
 class HAWC2SAeroElasticSolver(Group):
@@ -270,32 +275,17 @@ class HAWC2SAeroElasticSolver(Group):
         pg = self.add('pg', ParallelGroup())
 
         for i, case_id in enumerate(cases_list):
-            pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id], cs_size, pfsize))
+            pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id],
+                                           cs_size, pfsize))
 
             self.connect('pg.%s.outputs_rotor' % case_id,
-                         'aggregate.outputs_rotor_%i' % i)
+                         'aggregate.outputs_rotor_%d' % i)
             self.connect('pg.%s.outputs_blade' % case_id,
-                         'aggregate.outputs_blade_%i' % i)
+                         'aggregate.outputs_blade_%d' % i)
+
 
 #
 #    """
-#    def configure_hawc2s(self, htc_master_file=''):
-#
-#        # Generate simple CID cases
-#        self.add('casegen', MakeCases())
-#        self.driver.workflow.add('casegen')
-#        self.create_passthrough('casegen.user_cases')
-#
-#        self.htc_master_file = htc_master_file
-#
-#        if not self.htc_master_file == '':
-#            # Read Input file for data initialization
-#            self.reader = HAWC2InputReader()
-#            self.reader.htc_master_file = self.htc_master_file
-#            self.reader.execute()
-#
-#            self.casegen.vartrees = self.reader.vartrees.copy()
-#            self.vartrees_out = self.reader.vartrees.copy()
 #
 #        # connect FUSED-Wind inflow variables used by HAWC2S
 #        self.connect('inflow.vhub', 'casegen.wsp')
@@ -363,18 +353,4 @@ class HAWC2SAeroElasticSolver(Group):
 
 if __name__ == '__main__':
 
-    config = {}
-    config['master_file'] = 'main_hs2.htc'
-    cf = {}
-    config['HAWC2SInputWriter'] = cf
-    cf = {}
-    cf['dry_run'] = False
-    cf['copyback_results'] = False
-    cf['hawc2bin'] = 'hawc2s.exe'
-    config['HAWC2Wrapper'] = cf
-
-
-
-
-    a = HAWC2SWorkflow(config, 0, 0, 0, 0)
-    a.solve_nonlinear()
+    pass
