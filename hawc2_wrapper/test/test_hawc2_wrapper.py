@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
-
-from openmdao.api import Problem, Group
-
+import numpy as np
+from openmdao.api import Problem, Group, IndepVarComp
 from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
 from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
@@ -129,9 +128,17 @@ class TestHAWC2SAeroElasticSolver(object):
         config = {}
         config['master_file'] = 'main_hs2.htc'
         config['with_structure'] = 0
-        config['with_geom'] = 0
+        config['with_geom'] = 1
+        cf = {}
+        cf['blade_ni_span'] = 10
+        config['geom'] = cf
         cf = {}
         config['HAWC2SInputWriter'] = cf
+        cf = {}
+        cf['interp_from_htc'] = False
+        cf['hub_radius'] = 3.
+
+        config['HAWC2GeometryBuilder'] = cf
         cf = {}
         cf['dry_run'] = False
         cf['copyback_results'] = False
@@ -147,10 +154,33 @@ class TestHAWC2SAeroElasticSolver(object):
         cf['blade'] = ['aoa', 'Ft', 'Fn', 'cl', 'cd']
         cf['rotor'] = ['wsp', 'pitch', 'P', 'rpm', 'T']
         config['HAWC2SOutputs'] = cf
-
-        root = HAWC2SAeroElasticSolver(config, 0, 0, 48)
+        n = 4
+        root = HAWC2SAeroElasticSolver(config, [10, 19], n, 48)
         prob = Problem(root)
+        
+        if config['with_structure']:
+            prob.root.add('cs_props', IndepVarComp('cs_props', np.zeros([10, 19])), promotes=['*'])
+
+        if config['with_geom']:
+            geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
+                        'chord', 'rthick', 'p_le']
+            
+            for v in geom_var:
+                prob.root.add(v, IndepVarComp(v, np.zeros(n)), promotes=['*'])
+
+            prob.root.add('blade_length', IndepVarComp('blade_length', 0.), promotes=['*'])    
+
         prob.setup()
+        
+        if config['with_structure']:
+            prob['cs_props'] = np.zeros([10, 19])
+
+        if config['with_geom']:
+            for v in geom_var[:]:
+                prob[v] = np.zeros(n)
+            prob['z'] = np.array([0., 0.33, 0.66, 1.])
+
+            prob['blade_length'] = 86.
         prob.run()
         print prob['aggregate.wsp']
         print prob['aggregate.P']

@@ -86,7 +86,9 @@ class BeamGeometryVT(object):
     def __init__(self):
         # Blade main axis accumulated curve length (n)
         self.s = zeros([1])
-        self.main_axis = zeros([1, 3])  # Blade main axis (n,3)
+        self.x = zeros([1])
+        self.y = zeros([1])
+        self.z = zeros([1])
         self.rot_x = zeros([1])         # x-rotation angle (n)
         self.rot_y = zeros([1])         # y-rotation angle (n)
         self.rot_z = zeros([1])         # z-rotation angle (n)
@@ -95,7 +97,7 @@ class BeamGeometryVT(object):
 class BladeGeometryVT(BeamGeometryVT):
 
     def __init__(self):
-        super(BeamGeometryVT, self).__init__()
+        super(BladeGeometryVT, self).__init__()
         self.chord = zeros([1])   # Blade chord (n)
         self.rthick = zeros([1])  # Blade relative thickness (n)
         self.athick = zeros([1])  # Blade absolute thickness (n)

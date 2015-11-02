@@ -35,12 +35,19 @@ class HAWC2GeometryBuilder(object):
     c12axis: array
 
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(HAWC2GeometryBuilder, self).__init__()
+        
+        self.bladegeom = BladeGeometryVT()
         self.blade_ae = HAWC2BladeGeometry()
+        
+        for k, w in kwargs.iteritems():
+            try:
+                setattr(self, k, w)
+            except:
+                pass
 
     def execute(self):
-
 
         if self.interp_from_htc:
             c12axis = self.c12axis_init
@@ -54,14 +61,14 @@ class HAWC2GeometryBuilder(object):
         x = distfunc(dist)
         self.c12axis = np.zeros((x.shape[0], 4))
         for i in range(4):
-            tck = pchip(c12axis[:, 2], c12axis[:,i])
+            tck = pchip(c12axis[:, 2], c12axis[:, i])
             self.c12axis[:, i] = tck(x)
 
         # scale main axis according to radius
         self.c12axis[:,:3] *= self.blade_length
 
         self.blade_ae.radius = self.blade_length + self.hub_radius
-        self.blade_ae.s = self.bladegeom.smax * self.bladegeom.s * self.blade_length
+        self.blade_ae.s = self.bladegeom.s * self.blade_length
         self.blade_ae.rthick = self.bladegeom.rthick * 100.
         self.blade_ae.chord = self.bladegeom.chord * self.blade_length
         self.blade_ae.aeset = np.ones(len(self.blade_ae.s))
@@ -76,6 +83,7 @@ class HAWC2GeometryBuilder(object):
         # The HAWC2 blade axis is defined using the 1/2 chord points
         b = self.bladegeom
         c12axis = np.zeros((b.x.shape[0], 4))
+
         for i in range(b.x.shape[0]):
             xc12 = (.5 - b.p_le[i]) * b.chord[i] * np.cos(b.rot_z[i] * np.pi / 180.)
             yc12 = - (.5 - b.p_le[i]) * b.chord[i] * np.sin(b.rot_z[i] * np.pi / 180.)

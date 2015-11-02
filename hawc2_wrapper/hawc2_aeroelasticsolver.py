@@ -42,15 +42,17 @@ class HAWC2SWorkflow(Component):
         self.add_output('outputs_blade', shape=[nws, n*naes])
 
         if self.with_structure:
-            self.add_param('cs_props', np.zeros(cs_size))
+            self.add_param('cs_props', shape=cs_size)
 
         if self.with_geom:
             self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
             self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
-
-            self.add_param('pfIn', shape=[pfsize, 11])
+            self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
+                             'chord', 'rthick', 'p_le']
+            for v in self.geom_var:
+                self.add_param(v, shape=[pfsize])
             self.add_param('blade_length', 0.)
-            self.add_param('blade_ni_span', 0)
+            self.geom.blade_ni_span = config['geom']['blade_ni_span']
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -59,13 +61,13 @@ class HAWC2SWorkflow(Component):
             self._array2hawc2beamstructure(body, params['cs_props'])
 
         if self.with_geom:
+            for v in self.geom_var:
+                setattr(self.geom.bladegeom, v, params[v])
             self.geom.blade_length = params['blade_length']
-            self.geom.blade_ni_span = params['blade_ni_span']
-            bladegeom = self.geom.bladegeom
-            self._array2bladegeometry(bladegeom, params['pfIn'])
             self.geom.execute()
+
             self.writer.vartrees.blade_ae = self.geom.blade_ae
-            self.writer.vartrees.mainbodies.blade1.c12axis = self.geom.c12axis
+            self.writer.vartrees.main_bodies.blade1.c12axis = self.geom.c12axis
 
         if self.with_ctr_tuning:
             pass
@@ -81,23 +83,10 @@ class HAWC2SWorkflow(Component):
         unknowns['outputs_rotor'] = self.output.outputs_rotor
         unknowns['outputs_blade'] = self.output.outputs_blade
 
-    def _array2bladegeometry(bladegeom, pfIn):
 
-        bladegeom.s = pfIn[:, 0]
+    def _array2hawc2beamstructure(self, body, body_st):
 
-        bladegeom.chord = pfIn[:, 1]
-        bladegeom.rthick = pfIn[:, 2]
-        bladegeom.athick = pfIn[:, 3]
-        bladegeom.p_le = pfIn[:, 4]
-
-        bladegeom.main_axis = pfIn[:, 5:8]
-        bladegeom.rot_x = pfIn[:, 8]
-        bladegeom.rot_y = pfIn[:, 9]
-        bladegeom.rot_z = pfIn[:, 10]
-
-    def _array2hawc2beamstructure(body, body_st):
-
-        bset = body.body_set[1]
+        bset = body.body_set[1] - 1
         if body.st_input_type is 0:
             body.beam_structure[bset].s = body_st[:, 0]
             body.beam_structure[bset].dm = body_st[:, 1]
@@ -271,12 +260,25 @@ class HAWC2SAeroElasticSolver(Group):
             cases[name] = case
             cases_list.append(name)
 
+        promote = []
+        if config['with_structure']:
+            promote.append('cs_props')
+
+        if config['with_geom']:
+            var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
+                             'chord', 'rthick', 'p_le']
+            for v in var:
+                promote.append(v)
+            promote.append('blade_length')
+
         self.add('aggregate', OutputsAggregator(config, len(cases_list), naes))
-        pg = self.add('pg', ParallelGroup())
+        pg = self.add('pg', ParallelGroup(), promotes=promote)
+
+
 
         for i, case_id in enumerate(cases_list):
             pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id],
-                                           cs_size, pfsize))
+                                           cs_size, pfsize), promotes=promote)
 
             self.connect('pg.%s.outputs_rotor' % case_id,
                          'aggregate.outputs_rotor_%d' % i)

@@ -449,7 +449,10 @@ class HAWC2InputWriter(object):
         else:
             main_body.append('name        %s' % body.body_name)
             main_body.append('type        timoschenko')
-            main_body.append('nbodies     %d' % body.nbodies)
+            if body.nbodies < body.c12axis.shape[0]:
+                main_body.append('nbodies     %d' % body.nbodies)
+            else:
+                main_body.append('nbodies     %d' % (body.c12axis.shape[0]-1))
             main_body.append('node_distribution     c2_def')
 
             if body.damping_type is 'ani':
