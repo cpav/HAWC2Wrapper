@@ -13,7 +13,7 @@ from hawc2_geomIDO import HAWC2GeometryBuilder
 class HAWC2SWorkflow(Component):
     """
     OpenMDAO component to run the HAWC2S workflow.
-    
+
     parameters
     ----------
     config: dict
@@ -25,9 +25,13 @@ class HAWC2SWorkflow(Component):
         * 'HAWC2SOutputs': dict of the outputs required. It has to include two
             dictionaries 'rotor' and 'blade' with the list of rotor sensor and
             blade sensors.
-        *
-    
-    
+
+        * 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
+            parameters.
+        * 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
+        * 'HAWC2GeometryBuilder': dict for initialization of
+            HAWC2GeometryBuilder parameters
+
     """
     def __init__(self, config, case_id, case, cs_size, pfsize):
         super(HAWC2SWorkflow, self).__init__()
@@ -92,14 +96,11 @@ class HAWC2SWorkflow(Component):
             pass
 
         self.writer.execute()
-
         self.wrapper.compute()
-
         self.output.execute()
 
         unknowns['outputs_rotor'] = self.output.outputs_rotor
         unknowns['outputs_blade'] = self.output.outputs_blade
-
 
     def _array2hawc2beamstructure(self, body, body_st):
 
@@ -266,6 +267,9 @@ class HAWC2SAeroElasticSolver(Group):
     def __init__(self, config, cs_size, pfsize):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
+        # check that the config is ok
+        self._check_config(config)
+
         cases = {}
         cases_list = []
         for ws in config['cases']['wsp']:
@@ -291,8 +295,6 @@ class HAWC2SAeroElasticSolver(Group):
         self.add('aggregate', OutputsAggregator(config, len(cases_list)))
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
-
-
         for i, case_id in enumerate(cases_list):
             pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id],
                                            cs_size, pfsize), promotes=promote)
@@ -302,6 +304,46 @@ class HAWC2SAeroElasticSolver(Group):
             self.connect('pg.%s.outputs_blade' % case_id,
                          'aggregate.outputs_blade_%d' % i)
 
+    def _check_config(self, config):
+
+        if 'master_file' not in config.keys():
+            raise RuntimeError('You need to supply the name of the master' +
+                               'file in the configuration dictionary.')
+
+        if 'HAWC2GeometryBuilder' not in config.keys():
+            raise RuntimeError('You need to supply a config dict' +
+                               'for HAWC2GeometryBuilder.')
+
+        if 'HAWC2Wrapper' not in config.keys():
+            raise RuntimeError('You need to supply a config dict' +
+                               'for HAWC2Wrapper.')
+
+        if 'aerodynamic_sections' not in config.keys():
+            config['aerodynamic_sections'] = 40
+            print 'The number of aerodynamic section has not been specified' +\
+                  ' in the configuration dictionary. Default value of 40 selected.'
+
+        if 'with_structure' not in config.keys():
+            config['with_structure'] = False
+            print 'Structural properties are not set as parameters because' +\
+                  ' no option "with_structure" was given in the configuration.'
+
+        if 'with_geom' not in config.keys():
+            config['with_geom'] = False
+            print 'Blade planform properties are not set as parameters because' +\
+                  ' no option "with_geom" was given in the configuration.'
+
+        if 'HAWC2SInputWriter' not in config.keys():
+            config['HAWC2SInputWriter'] = {}
+            print 'No configuration dictionary given for HAWC2SInputWriter' +\
+                  'proceeding with default values.'
+
+        if 'HAWC2SOutputs' not in config.keys():
+            print 'No HAWC2SOutputs output dictionary given proceeding' +\
+                  ' with default values.'
+            config['HAWC2SOutputs'] = {}
+            config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
+            config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 #
 #        self.connect('designTSR',
 #                     'casegen.vartrees.dlls.risoe_controller.dll_init.designTSR')

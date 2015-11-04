@@ -129,9 +129,9 @@ class TestHAWC2SAeroElasticSolver(object):
         config['master_file'] = 'main_hs2.htc'
         config['with_structure'] = 1
         config['with_geom'] = 1
-        config['aerodynamic_sections'] = 30
+        #config['aerodynamic_sections'] = 30
         cf = {}
-        config['HAWC2SInputWriter'] = cf
+        #config['HAWC2SInputWriter'] = cf
         cf = {}
         cf['blade_ni_span'] = 10
         cf['interp_from_htc'] = False
