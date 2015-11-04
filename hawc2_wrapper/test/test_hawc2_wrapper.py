@@ -127,17 +127,15 @@ class TestHAWC2SAeroElasticSolver(object):
         
         config = {}
         config['master_file'] = 'main_hs2.htc'
-        config['with_structure'] = 0
+        config['with_structure'] = 1
         config['with_geom'] = 1
-        cf = {}
-        cf['blade_ni_span'] = 10
-        config['geom'] = cf
+        config['aerodynamic_sections'] = 30
         cf = {}
         config['HAWC2SInputWriter'] = cf
         cf = {}
+        cf['blade_ni_span'] = 10
         cf['interp_from_htc'] = False
         cf['hub_radius'] = 3.
-
         config['HAWC2GeometryBuilder'] = cf
         cf = {}
         cf['dry_run'] = False
@@ -154,32 +152,43 @@ class TestHAWC2SAeroElasticSolver(object):
         cf['blade'] = ['aoa', 'Ft', 'Fn', 'cl', 'cd']
         cf['rotor'] = ['wsp', 'pitch', 'P', 'rpm', 'T']
         config['HAWC2SOutputs'] = cf
-        n = 4
-        root = HAWC2SAeroElasticSolver(config, [10, 19], n, 48)
+        n = 5
+        root = HAWC2SAeroElasticSolver(config, [10, 19], n)
         prob = Problem(root)
         
         if config['with_structure']:
-            prob.root.add('cs_props', IndepVarComp('cs_props', np.zeros([10, 19])), promotes=['*'])
+            prob.root.add('blade_beam_structure', IndepVarComp('blade_beam_structure', np.zeros([10, 19])), promotes=['*'])
 
         if config['with_geom']:
             geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                         'chord', 'rthick', 'p_le']
-            
+
             for v in geom_var:
                 prob.root.add(v, IndepVarComp(v, np.zeros(n)), promotes=['*'])
 
             prob.root.add('blade_length', IndepVarComp('blade_length', 0.), promotes=['*'])    
 
         prob.setup()
-        
+
         if config['with_structure']:
-            prob['cs_props'] = np.zeros([10, 19])
+            mat = np.zeros([10, 19])
+            mat[:, 0] = np.linspace(0, 86, 10)
+            mat[:, 1] = 1.
+            mat[:, 4] = 0.1
+            mat[:, 5] = 0.1
+            mat[:, 8] = 1e9
+            mat[:, 9] = 1e9
+            for i in [10, 11, 12, 13, 14, 15]:
+                mat[:, i] = 0.1
+            prob['blade_beam_structure'] = mat
 
         if config['with_geom']:
             for v in geom_var[:]:
                 prob[v] = np.zeros(n)
-            prob['z'] = np.array([0., 0.33, 0.66, 1.])
-
+            prob['z'] = np.array([0., 0.25, 0.5, 0.75, 1.])
+            prob['s'] = np.array([0., 0.25, 0.5, 0.75, 1.])
+            prob['chord'] = np.array([1., 2., 2.5, 0.75, 0.5])/86.
+            prob['rthick'] = np.array([1., .3, .25, 0.25, 0.2])
             prob['blade_length'] = 86.
         prob.run()
         print prob['aggregate.wsp']

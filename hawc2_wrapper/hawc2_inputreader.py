@@ -8,7 +8,7 @@ from hawc2_vartrees import HAWC2VarTrees, HAWC2Simulation, HAWC2Wind,\
                            HAWC2AeroDrag, HAWC2AeroDragElement, HAWC2MainBody,\
                            HAWC2BeamStructure, HAWC2Type2DLL, HAWC2OutputVT,\
                            HAWC2SBody
-from scipy.interpolate import pchip
+
 from numpy import array, loadtxt
 
 
@@ -60,14 +60,6 @@ class HAWC2InputReader(object):
             if 'blade'+str(iblade) not in self.vartrees.body_order:
                 self.vartrees.rotor.nblades = iblade-1
                 break
-
-        # copy blade twist from c2_def to blade_ae vartree # FIXME: dont like things defined twice
-        #if hasattr(self.vartrees.main_bodies, 'blade1'):
-        #    c12 = self.vartrees.main_bodies.blade1.c12axis
-        #    tck = pchip(c12[:, 2], c12[:, 3])
-        #    twist = tck(self.vartrees.blade_ae.s)
-        #    self.vartrees.blade_ae.twist = twist
-        #    self.vartrees.blade_ae.c12axis = c12.copy()
 
     def set_entry(self, vt, section, name, h2name=None, required=False):
 
@@ -304,8 +296,6 @@ class HAWC2InputReader(object):
             b.damping_type = 'ani'
         else:
             b = self.set_entry(b, section, 'damping_posdef')
-
-        #b = self.set_entry(b, section, 'type')
 
         cm = section.get_entry('concentrated_mass')
         if cm is not None:

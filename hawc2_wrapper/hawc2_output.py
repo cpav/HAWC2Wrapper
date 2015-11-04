@@ -505,9 +505,15 @@ class HAWC2SOutputCompact(HAWC2SOutput):
         self.sensor_rotor = []
         for name in config['rotor']:
             self.sensor_rotor.append(name)
+            if name not in self.outlist1:
+                raise RuntimeError('Rotor output required not supported.' + 
+                                   ' Wrong sensor: %s.' % name)
         self.sensor_blade = []
         for name in config['blade']:
             self.sensor_blade.append(name)
+            if name not in self.outlist2:
+                raise RuntimeError('Blade output required not supported.' + 
+                                   ' Wrong sensor: %s.' % name)
 
     def execute(self):
         super(HAWC2SOutputCompact, self).execute()

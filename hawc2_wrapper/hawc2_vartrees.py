@@ -1,5 +1,5 @@
 from numpy import zeros, array, pi
-from vartrees import RotorVT, NacelleVT, GeneratorVT, TowerVT, ShaftVT, HubVT
+from vartrees import RotorVT
 
 
 class HAWC2AirfoilPolar(object):
@@ -35,10 +35,10 @@ class HAWC2BladeGeometry(object):
     def __init__(self):
         self.radius = 0.0
         self.s = zeros([1])  # Running length along blade axis
-        #self.c12axis = zeros([1])  # Pitch axis of blade
+        # self.c12axis = zeros([1])  # Pitch axis of blade
         self.chord = zeros([1])  # Blade chord
         self.rthick = zeros([1])  # Blade relative thickness
-        #self.twist = zeros([1])  # Blade twist (positive nose up!)
+        # self.twist = zeros([1])  # Blade twist (positive nose up!)
         self.aeset = zeros([1])  # Airfoil set
 
 
@@ -483,8 +483,9 @@ class HAWC2Type2DLLIO(object):
         io_list = []
         for i, c in enumerate(io):
             print c
-            io_list.append(len(c)*' %s'%tuple(c))
+            io_list.append(len(c)*' %s' % tuple(c))
         return io_list
+
 
 class HAWC2Type2DLL(object):
 
@@ -628,7 +629,7 @@ type2_dll_dict = {'risoe_controller': DTUBasicControllerVT,
                   'generator_servo': HAWC2Type2DLLinit,
                   'mech_brake': HAWC2Type2DLLinit,
                   'servo_with_limits': HAWC2Type2DLLinit,
-                  'disttowtip':HAWC2Type2DLLinit}
+                  'disttowtip': HAWC2Type2DLLinit}
 
 
 class HAWC2SCommandsOpt(object):
@@ -698,13 +699,6 @@ class HAWC2VarTrees(object):
         self.airfoildata = HAWC2AirfoilData()
         self.output = HAWC2OutputVT()
         self.rotor = RotorVT()
-        """
-        self.nacelle = NacelleVT()
-        self.generator = GeneratorVT()
-        self.tower = TowerVT()
-        self.shaft = ShaftVT()
-        self.hub = HubVT()
-        """
         self.body_order = []
         self.main_bodies = HAWC2MainBodyList()
         self.dlls_order = []

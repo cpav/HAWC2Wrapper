@@ -11,7 +11,24 @@ from hawc2_geomIDO import HAWC2GeometryBuilder
 
 
 class HAWC2SWorkflow(Component):
-
+    """
+    OpenMDAO component to run the HAWC2S workflow.
+    
+    parameters
+    ----------
+    config: dict
+        Configuration dictionary. It has to contain the following entries:
+        * 'with_structure': bool to add structural properties to the parameters
+        * 'with_geom': bool to add the blade geometry to the parameters
+        * 'master_file': str with the name of the master file.
+        * 'aerodynamic_sections': int of the number of aerodynamic sections.
+        * 'HAWC2SOutputs': dict of the outputs required. It has to include two
+            dictionaries 'rotor' and 'blade' with the list of rotor sensor and
+            blade sensors.
+        *
+    
+    
+    """
     def __init__(self, config, case_id, case, cs_size, pfsize):
         super(HAWC2SWorkflow, self).__init__()
         self.with_structure = config['with_structure']
@@ -25,12 +42,13 @@ class HAWC2SWorkflow(Component):
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
+        self.writer.vartrees.aero.aerosections = config['aerodynamic_sections']
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)
 
         self.wrapper = HAWC2Wrapper(**config['HAWC2Wrapper'])
         self.wrapper.case_id = case_id
-        naes = self.writer.vartrees.aero.aerosections-2
+        naes = config['aerodynamic_sections']-2
 
         self.output = HAWC2SOutputCompact(config['HAWC2SOutputs'])
         self.output.case_id = case_id
@@ -42,7 +60,7 @@ class HAWC2SWorkflow(Component):
         self.add_output('outputs_blade', shape=[nws, n*naes])
 
         if self.with_structure:
-            self.add_param('cs_props', shape=cs_size)
+            self.add_param('blade_beam_structure', shape=cs_size)
 
         if self.with_geom:
             self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
@@ -52,13 +70,12 @@ class HAWC2SWorkflow(Component):
             for v in self.geom_var:
                 self.add_param(v, shape=[pfsize])
             self.add_param('blade_length', 0.)
-            self.geom.blade_ni_span = config['geom']['blade_ni_span']
 
     def solve_nonlinear(self, params, unknowns, resids):
 
         if self.with_structure:
             body = self.writer.vartrees.main_bodies.blade1
-            self._array2hawc2beamstructure(body, params['cs_props'])
+            self._array2hawc2beamstructure(body, params['blade_beam_structure'])
 
         if self.with_geom:
             for v in self.geom_var:
@@ -182,11 +199,11 @@ class HAWC2SWorkflow(Component):
 class OutputsAggregator(Component):
     """
     """
-    def __init__(self, config, nws, naes):
+    def __init__(self, config, nws):
         super(OutputsAggregator, self).__init__()
 
         self.nws = nws
-        self.naes = naes
+        self.naes = config['aerodynamic_sections']-2
 
         # Add parameters coming from ParallelGroup
         n = len(config['HAWC2SOutputs']['rotor'])
@@ -196,7 +213,7 @@ class OutputsAggregator(Component):
         n = len(config['HAWC2SOutputs']['blade'])
         for i in range(nws):
             p_name = 'outputs_blade_%d' % i
-            self.add_param(p_name, shape=[1, n*naes])
+            self.add_param(p_name, shape=[1, n*self.naes])
 
         # Add outputs
         self.sensor_rotor = []
@@ -207,7 +224,7 @@ class OutputsAggregator(Component):
         self.sensor_blade = []
         for sensor in config['HAWC2SOutputs']['blade']:
             self.sensor_blade.append(sensor)
-            self.add_output(sensor, shape=[nws, naes])
+            self.add_output(sensor, shape=[nws, self.naes])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -246,7 +263,7 @@ class HAWC2SAeroElasticSolver(Group):
     radius: float
         blade length
     """
-    def __init__(self, config, cs_size, pfsize, naes):
+    def __init__(self, config, cs_size, pfsize):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
         cases = {}
@@ -262,7 +279,7 @@ class HAWC2SAeroElasticSolver(Group):
 
         promote = []
         if config['with_structure']:
-            promote.append('cs_props')
+            promote.append('blade_beam_structure')
 
         if config['with_geom']:
             var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
@@ -271,7 +288,7 @@ class HAWC2SAeroElasticSolver(Group):
                 promote.append(v)
             promote.append('blade_length')
 
-        self.add('aggregate', OutputsAggregator(config, len(cases_list), naes))
+        self.add('aggregate', OutputsAggregator(config, len(cases_list)))
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
 
@@ -285,50 +302,11 @@ class HAWC2SAeroElasticSolver(Group):
             self.connect('pg.%s.outputs_blade' % case_id,
                          'aggregate.outputs_blade_%d' % i)
 
-
-#
-#    """
-#
-#        # connect FUSED-Wind inflow variables used by HAWC2S
-#        self.connect('inflow.vhub', 'casegen.wsp')
-#        self.connect('inflow.density[0]', 'casegen.vartrees.wind.density')
 #
 #        self.connect('designTSR',
 #                     'casegen.vartrees.dlls.risoe_controller.dll_init.designTSR')
 #        self.connect('designTSR',
 #                     'vartrees_out.dlls.risoe_controller.dll_init.designTSR')
-#
-#        # add case iterator with HAWC2 wrapper
-#        self.add('h2', HAWC2SCaseIter())
-#        self.driver.workflow.add('h2')
-#        self.connect('model_name', 'h2.model_name')
-#        self.connect('hawc2bin', 'h2.hawc2bin')
-#        self.connect('casegen.cases', 'h2.vartrees')
-#        self.connect('casegen.case_ids', 'h2.case_ids')
-#
-#        self.create_passthrough('h2.sequential')
-#        self.create_passthrough('h2.set_tsr_flag')
-#        self.h2.output.commands = self.reader.vartrees.h2s.commands
-#
-#        # postprocess CID cases
-#        self.add('h2post', H2SCIDPostProcess())
-#        self.driver.workflow.add('h2post')
-#        self.connect('h2.rotor_loads', 'h2post.rotor_loads_cid')
-#        self.connect('h2.blade_loads', 'h2post.blade_loads_cid')
-#        self.connect('h2.hub_loads', 'h2post.hub_loads_cid')
-#        self.connect('h2.blade_disps', 'h2post.blade_disps_cid')
-#        self.connect('h2.oper', 'h2post.oper_cid')
-#
-#        self.connect('h2post.rotor_loads', 'rotor_loads')
-#        self.connect('h2post.blade_loads', 'blade_loads')
-#        self.connect('h2post.blade_disps', 'blade_disps')
-#        self.connect('h2post.oper', 'oper')
-#
-#        self.create_passthrough('h2post.hub_loads')
-#
-#        self.log_level = logging.DEBUG
-#
-#
 #
 #    def configure_freq_placement(self, freq_type='ae'):
 #
