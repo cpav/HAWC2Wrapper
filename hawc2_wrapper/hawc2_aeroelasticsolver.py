@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 
-from openmdao.api import Component, Group, ParallelGroup, IndepVarComp
+from openmdao.api import Component, Group, ParallelGroup
 
 from hawc2_inputreader import HAWC2InputReader
 from hawc2_inputwriter import HAWC2SInputWriter
@@ -18,25 +18,41 @@ class HAWC2SWorkflow(Component):
     ----------
     config: dict
         Configuration dictionary. It has to contain the following entries:
-        * 'with_structure': bool to add structural properties to the parameters
-        * 'with_geom': bool to add the blade geometry to the parameters
-        * 'master_file': str with the name of the master file.
-        * 'aerodynamic_sections': int of the number of aerodynamic sections.
-        * 'HAWC2SOutputs': dict of the outputs required. It has to include two
+        |* 'with_structure': bool to add structural properties to the parameters
+        |* 'with_geom': bool to add the blade geometry to the parameters
+        |* 'master_file': str with the name of the master file.
+        |* 'aerodynamic_sections': int of the number of aerodynamic sections.
+        |* 'HAWC2SOutputs': dict of the outputs required. It has to include two
             dictionaries 'rotor' and 'blade' with the list of rotor sensor and
             blade sensors.
 
-        * 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
+        |* 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
             parameters.
-        * 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
-        * 'HAWC2GeometryBuilder': dict for initialization of
+        |* 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
+        |* 'HAWC2GeometryBuilder': dict for initialization of
             HAWC2GeometryBuilder parameters
+
+    case_id: str
+        Name of the HAWC2s case to create and run. If case_id contains the word
+        "user" then it is assumed that the user is providing the operational
+        points. Therefore "case" has to be a dictionary.
+
+    case: list/dict
+        This variable can be a list or a dictionary. If the operational points
+        need to be computed "case" is a list with the wind speeds to evaluate.
+        If more than one wind speed is given the wind speeds evaluated are
+        actually the first, the last, and those obtained with a linspace of the
+        same length. If the operational points do not need to be computed
+        "case" is a dictionary with keys "wsp", "rpm", and "pitch". Each
+        parameter is a list containing wind speed, rotorspeed and pitch angle
+        respectively.
 
     """
     def __init__(self, config, case_id, case, cs_size, pfsize):
         super(HAWC2SWorkflow, self).__init__()
         self.with_structure = config['with_structure']
         self.with_geom = config['with_geom']
+        self.with_tsr = config['with_tsr']
         self.with_ctr_tuning = 0
         self.with_freq_placement = 0
 
@@ -63,6 +79,9 @@ class HAWC2SWorkflow(Component):
         n = len(config['HAWC2SOutputs']['blade'])
         self.add_output('outputs_blade', shape=[nws, n*naes])
 
+        if self.with_tsr:
+            self.add_param('tsr', 0.)
+
         if self.with_structure:
             self.add_param('blade_beam_structure', shape=cs_size)
 
@@ -77,9 +96,14 @@ class HAWC2SWorkflow(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
+        if self.with_tsr:
+            self.writer.vartrees.dlls.risoe_controller.dll_init.designTSR = \
+                params['tsr']
+
         if self.with_structure:
             body = self.writer.vartrees.main_bodies.blade1
-            self._array2hawc2beamstructure(body, params['blade_beam_structure'])
+            self._array2hawc2beamstructure(body,
+                                           params['blade_beam_structure'])
 
         if self.with_geom:
             for v in self.geom_var:
@@ -199,20 +223,37 @@ class HAWC2SWorkflow(Component):
 
 class OutputsAggregator(Component):
     """
+    OpenMDAO component to gather the outputs from the ParallelGroup.
+
+    parameters
+    ----------
+
+    config: dict
+        Configuration dictionary. Requires:
+        * 'aerodynamic_sections'. Number of aerodynamic sections.
+        * 'HAWC2SOutputs'. Dictionary of the outputs.
+
+    n_cases: int
+        Number of cases evaluated.
+
+    returns
+    -------
+    Output Arrays
+
     """
-    def __init__(self, config, nws):
+    def __init__(self, config, n_cases):
         super(OutputsAggregator, self).__init__()
 
-        self.nws = nws
+        self.n_cases = n_cases
         self.naes = config['aerodynamic_sections']-2
 
         # Add parameters coming from ParallelGroup
         n = len(config['HAWC2SOutputs']['rotor'])
-        for i in range(nws):
+        for i in range(n_cases):
             p_name = 'outputs_rotor_%d' % i
             self.add_param(p_name, shape=[1, n])
         n = len(config['HAWC2SOutputs']['blade'])
-        for i in range(nws):
+        for i in range(n_cases):
             p_name = 'outputs_blade_%d' % i
             self.add_param(p_name, shape=[1, n*self.naes])
 
@@ -220,22 +261,22 @@ class OutputsAggregator(Component):
         self.sensor_rotor = []
         for sensor in config['HAWC2SOutputs']['rotor']:
             self.sensor_rotor.append(sensor)
-            self.add_output(sensor, shape=[nws])
+            self.add_output(sensor, shape=[n_cases])
 
         self.sensor_blade = []
         for sensor in config['HAWC2SOutputs']['blade']:
             self.sensor_blade.append(sensor)
-            self.add_output(sensor, shape=[nws, self.naes])
+            self.add_output(sensor, shape=[n_cases, self.naes])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
         for j, sensor in enumerate(self.sensor_rotor):
-            for i in range(self.nws):
+            for i in range(self.n_cases):
                 p_name = 'outputs_rotor_%d' % i
                 out = params[p_name]
                 unknowns[sensor][i] = out[0, j]
         for j, sensor in enumerate(self.sensor_blade):
-            for i in range(self.nws):
+            for i in range(self.n_cases):
                 p_name = 'outputs_blade_%d' % i
                 out = params[p_name]
                 unknowns[sensor][i, :] = out[0, j*self.naes:(j+1)*self.naes]
@@ -243,26 +284,13 @@ class OutputsAggregator(Component):
 
 class HAWC2SAeroElasticSolver(Group):
     """
-    Assembly for running HAWC2S in parallel using a CaseIteratorDriver
+    OpenMDAO group to execute HAWC2s in parallel.
 
     parameters
     -----------
-    wsp: array-like
-        array of wind speeds. pitch and RPM will either be interpolated from
-        the opt file or computed on the fly
-    htc_master_file: string
-        name of HAWC2S master file.
-    hawc2bin: string
-        absolute path to HAWC2S executable
+    config: dict
+        Configuration dictionary.
 
-    optional parameters:
-    --------------------
-    bladegeom: BladeGeometryVT
-        IDOtools blade geometry VarTree
-    beamprops: BeamStructureVT
-        IDOtools blade beam structural properties
-    radius: float
-        blade length
     """
     def __init__(self, config, cs_size, pfsize):
         super(HAWC2SAeroElasticSolver, self).__init__()
@@ -282,6 +310,9 @@ class HAWC2SAeroElasticSolver(Group):
             cases_list.append(name)
 
         promote = []
+        if config['with_tsr']:
+            promote.append('tsr')        
+
         if config['with_structure']:
             promote.append('blade_beam_structure')
 
@@ -323,6 +354,11 @@ class HAWC2SAeroElasticSolver(Group):
             print 'The number of aerodynamic section has not been specified' +\
                   ' in the configuration dictionary. Default value of 40 selected.'
 
+        if 'with_tsr' not in config.keys():
+            config['with_tsr'] = False
+            print 'Tip-speed-ratio is not set as parameters because' +\
+                  ' no option "with_tsr" was given in the configuration.'
+
         if 'with_structure' not in config.keys():
             config['with_structure'] = False
             print 'Structural properties are not set as parameters because' +\
@@ -344,12 +380,8 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs'] = {}
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
-#
-#        self.connect('designTSR',
-#                     'casegen.vartrees.dlls.risoe_controller.dll_init.designTSR')
-#        self.connect('designTSR',
-#                     'vartrees_out.dlls.risoe_controller.dll_init.designTSR')
-#
+
+
 #    def configure_freq_placement(self, freq_type='ae'):
 #
 #        self.h2.configure_freq_placement_cid(freq_type=freq_type)
