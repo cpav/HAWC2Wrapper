@@ -129,14 +129,13 @@ class TestHAWC2SAeroElasticSolver(object):
         config = {}
         config['master_file'] = 'main_hs2.htc'
         config['with_structure'] = 1
-        config['with_geom'] = 1
+        config['with_geom'] = 0
         #config['aerodynamic_sections'] = 30
         cf = {}
         #config['HAWC2SInputWriter'] = cf
         cf = {}
-        cf['blade_ni_span'] = 10
-        cf['interp_from_htc'] = False
-        cf['hub_radius'] = 3.
+        cf['blade_ni_span'] = 20
+        cf['hub_radius'] = 2.8
         config['HAWC2GeometryBuilder'] = cf
         cf = {}
         cf['dry_run'] = False
@@ -173,7 +172,7 @@ class TestHAWC2SAeroElasticSolver(object):
 
         if config['with_structure']:
             mat = np.zeros([10, 19])
-            mat[:, 0] = np.linspace(0, 86, 10)
+            mat[:, 0] = np.linspace(0, 1, 10)
             mat[:, 1] = 1.
             mat[:, 4] = 0.1
             mat[:, 5] = 0.1

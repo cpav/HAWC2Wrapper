@@ -109,6 +109,9 @@ class HAWC2SWorkflow(Component):
             for v in self.geom_var:
                 setattr(self.geom.bladegeom, v, params[v])
         else:
+            self.geom.bladegeom.s = self.writer.vartrees.blade_ae.s
+            self.geom.bladegeom.rthick = self.writer.vartrees.blade_ae.rthick
+            self.geom.bladegeom.chord = self.writer.vartrees.blade_ae.chord
             blade_length = self.writer.vartrees.main_bodies.blade1.c12axis[-1, 2]
 
         self.geom.blade_length = blade_length
