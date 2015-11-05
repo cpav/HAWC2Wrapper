@@ -100,11 +100,6 @@ class HAWC2SWorkflow(Component):
             self.writer.vartrees.dlls.risoe_controller.dll_init.designTSR = \
                 params['tsr']
 
-        if self.with_structure:
-            body = self.writer.vartrees.main_bodies.blade1
-            self._array2hawc2beamstructure(body,
-                                           params['blade_beam_structure'])
-
         if self.with_geom:
             for v in self.geom_var:
                 setattr(self.geom.bladegeom, v, params[v])
@@ -113,6 +108,16 @@ class HAWC2SWorkflow(Component):
 
             self.writer.vartrees.blade_ae = self.geom.blade_ae
             self.writer.vartrees.main_bodies.blade1.c12axis = self.geom.c12axis
+
+        if self.with_structure:
+            body = self.writer.vartrees.main_bodies.blade1
+            if self.with_geom:
+                blade_length = params['blade_length']
+            else:
+                blade_length = body.c12axis[-1, 2]
+
+            self._array2hawc2beamstructure(blade_length, body,
+                                           params['blade_beam_structure'])
 
         if self.with_ctr_tuning:
             pass
@@ -126,11 +131,11 @@ class HAWC2SWorkflow(Component):
         unknowns['outputs_rotor'] = self.output.outputs_rotor
         unknowns['outputs_blade'] = self.output.outputs_blade
 
-    def _array2hawc2beamstructure(self, body, body_st):
+    def _array2hawc2beamstructure(self, blade_length, body, body_st):
 
         bset = body.body_set[1] - 1
         if body.st_input_type is 0:
-            body.beam_structure[bset].s = body_st[:, 0]
+            body.beam_structure[bset].s = body_st[:, 0]*blade_length
             body.beam_structure[bset].dm = body_st[:, 1]
             body.beam_structure[bset].x_cg = body_st[:, 2]
             body.beam_structure[bset].y_cg = body_st[:, 3]
@@ -320,7 +325,7 @@ class HAWC2SAeroElasticSolver(Group):
 
         promote = []
         if config['with_tsr']:
-            promote.append('tsr')        
+            promote.append('tsr')
 
         if config['with_structure']:
             promote.append('blade_beam_structure')
