@@ -49,7 +49,7 @@ class HAWC2GeometryBuilder(object):
 
         if self.interp_from_htc:
             c12axis = self.c12axis_init
-            self.c12axis_init /= self.blade_length
+            self.c12axis_init[:, :3] /= self.blade_length
         else:
             c12axis = self.calculate_c12axis()
 
