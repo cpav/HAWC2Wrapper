@@ -87,7 +87,6 @@ class HAWC2SWorkflow(Component):
 
         self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
-
         if self.with_geom:
             self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                              'chord', 'rthick', 'p_le']
@@ -100,8 +99,9 @@ class HAWC2SWorkflow(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
+        vt = self.writer.vartrees
         if self.with_tsr:
-            self.writer.vartrees.dlls.risoe_controller.dll_init.designTSR = \
+            vt.dlls.risoe_controller.dll_init.designTSR = \
                 params['tsr']
 
         if self.with_geom:
@@ -109,19 +109,20 @@ class HAWC2SWorkflow(Component):
             for v in self.geom_var:
                 setattr(self.geom.bladegeom, v, params[v])
         else:
-            self.geom.bladegeom.s = self.writer.vartrees.blade_ae.s
-            self.geom.bladegeom.rthick = self.writer.vartrees.blade_ae.rthick
-            self.geom.bladegeom.chord = self.writer.vartrees.blade_ae.chord
-            blade_length = self.writer.vartrees.main_bodies.blade1.c12axis[-1, 2]
+            blade_length = vt.main_bodies.blade1.c12axis[-1, 2]
+            # conversion from HAWC2BladeGeometry to BladeGeometryVT
+            self.geom.bladegeom.s = vt.blade_ae.s
+            self.geom.bladegeom.rthick = vt.blade_ae.rthick/100.
+            self.geom.bladegeom.chord = vt.blade_ae.chord/blade_length
 
         self.geom.blade_length = blade_length
         self.geom.execute()
 
-        self.writer.vartrees.blade_ae = self.geom.blade_ae
-        self.writer.vartrees.main_bodies.blade1.c12axis = self.geom.c12axis
+        vt.blade_ae = self.geom.blade_ae
+        vt.main_bodies.blade1.c12axis = self.geom.c12axis
 
         if self.with_structure:
-            body = self.writer.vartrees.main_bodies.blade1
+            body = vt.main_bodies.blade1
             self._array2hawc2beamstructure(blade_length, body,
                                            params['blade_beam_structure'])
 

@@ -128,7 +128,7 @@ class TestHAWC2SAeroElasticSolver(object):
         
         config = {}
         config['master_file'] = 'main_hs2.htc'
-        config['with_structure'] = 1
+        config['with_structure'] = 0
         config['with_geom'] = 0
         #config['aerodynamic_sections'] = 30
         cf = {}
@@ -144,7 +144,7 @@ class TestHAWC2SAeroElasticSolver(object):
         config['HAWC2Wrapper'] = cf
 
         cf = {}
-        cf['wsp'] = [4, 5, 7, 10, 25]
+        cf['wsp'] = [4]
         cf['user'] = [{'wsp': 70, 'pitch': 80, 'rpm': 0.01}]
         config['cases'] = cf
 
@@ -199,7 +199,7 @@ if __name__ == '__main__':
 
     print 'Test 1'
     t1 = TestIO()
-    t1.run()
+    #t1.run()
 
     t2 = TestRun()
     # t2.run_hs2()

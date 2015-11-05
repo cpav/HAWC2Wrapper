@@ -49,6 +49,7 @@ class HAWC2GeometryBuilder(object):
 
         if self.interp_from_htc:
             c12axis = self.c12axis_init
+            self.c12axis_init /= self.blade_length
         else:
             c12axis = self.calculate_c12axis()
 
@@ -69,6 +70,7 @@ class HAWC2GeometryBuilder(object):
         l = ((self.c12axis[1:, 0]-self.c12axis[:-1, 0])**2 + 
              (self.c12axis[1:, 1]-self.c12axis[:-1, 1])**2 +
              (self.c12axis[1:, 2]-self.c12axis[:-1, 2])**2)**.5
+
         self.blade_ae.s = self.bladegeom.s * sum(l) / self.bladegeom.s[-1]
         self.blade_ae.rthick = self.bladegeom.rthick * 100.
         self.blade_ae.chord = self.bladegeom.chord * self.blade_length
