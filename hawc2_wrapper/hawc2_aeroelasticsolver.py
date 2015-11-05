@@ -160,7 +160,7 @@ class HAWC2SWorkflow(Component):
     def _check_cases(self, vt, case_id, case):
 
         if 'user' not in case_id:
-            if isinstance(case, int):
+            if isinstance(case, int) or isinstance(case, float):
                 vt.dlls.risoe_controller.dll_init.Vin = case
                 vt.dlls.risoe_controller.dll_init.Vout = case
                 vt.dlls.risoe_controller.dll_init.nV = 1

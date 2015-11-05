@@ -72,17 +72,18 @@ class HAWC2Wrapper(object):
 
         tt = time.time()
 
-        exec_str = ''
+        exec_str = []
 
         # check platform and add wine to command list if we're on OS X or Linux
         _platform = platform.platform()
         if 'Linux' in _platform or 'Darwin' in _platform:
-            exec_str += self.wine_cmd + ' '
+            exec_str.append(self.wine_cmd)
 
-        exec_str += self.hawc2bin + ' '
-        exec_str += self.case_id+'.htc'
+        exec_str.append(self.hawc2bin)
+        exec_str.append(self.case_id+'.htc')
 
         if not self.dry_run:
+            print exec_str
             proc = subprocess.check_output(exec_str)
             print self.hawc2bin, 'output:'
             print proc
