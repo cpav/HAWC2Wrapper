@@ -85,14 +85,18 @@ class HAWC2SWorkflow(Component):
         if self.with_structure:
             self.add_param('blade_beam_structure', shape=cs_size)
 
+        self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
+        self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
+
         if self.with_geom:
-            self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
-            self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
             self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                              'chord', 'rthick', 'p_le']
             for v in self.geom_var:
                 self.add_param(v, shape=[pfsize])
             self.add_param('blade_length', 0.)
+            self.geom.interp_from_htc = False
+        else:
+            self.geom.interp_from_htc = True
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -101,21 +105,20 @@ class HAWC2SWorkflow(Component):
                 params['tsr']
 
         if self.with_geom:
+            blade_length = params['blade_length']
             for v in self.geom_var:
                 setattr(self.geom.bladegeom, v, params[v])
-            self.geom.blade_length = params['blade_length']
-            self.geom.execute()
+        else:
+            blade_length = self.writer.vartrees.main_bodies.blade1.c12axis[-1, 2]
 
-            self.writer.vartrees.blade_ae = self.geom.blade_ae
-            self.writer.vartrees.main_bodies.blade1.c12axis = self.geom.c12axis
+        self.geom.blade_length = blade_length
+        self.geom.execute()
+
+        self.writer.vartrees.blade_ae = self.geom.blade_ae
+        self.writer.vartrees.main_bodies.blade1.c12axis = self.geom.c12axis
 
         if self.with_structure:
             body = self.writer.vartrees.main_bodies.blade1
-            if self.with_geom:
-                blade_length = params['blade_length']
-            else:
-                blade_length = body.c12axis[-1, 2]
-
             self._array2hawc2beamstructure(blade_length, body,
                                            params['blade_beam_structure'])
 
