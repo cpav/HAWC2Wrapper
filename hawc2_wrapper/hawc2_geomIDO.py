@@ -66,7 +66,10 @@ class HAWC2GeometryBuilder(object):
         self.c12axis[:, :3] *= self.blade_length
 
         self.blade_ae.radius = self.blade_length + self.hub_radius
-        self.blade_ae.s = self.bladegeom.s * self.blade_length / self.bladegeom.s[-1]
+        l = ((self.c12axis[1:, 0]-self.c12axis[:-1, 0])**2 + 
+             (self.c12axis[1:, 1]-self.c12axis[:-1, 1])**2 +
+             (self.c12axis[1:, 2]-self.c12axis[:-1, 2])**2)**.5
+        self.blade_ae.s = self.bladegeom.s * sum(l) / self.bladegeom.s[-1]
         self.blade_ae.rthick = self.bladegeom.rthick * 100.
         self.blade_ae.chord = self.bladegeom.chord * self.blade_length
         self.blade_ae.aeset = np.ones(len(self.blade_ae.s))

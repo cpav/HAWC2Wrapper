@@ -51,6 +51,7 @@ class TestRun():
         t2.case_id = 'h2'
         t2.compute()
 
+
 class TestROutput():
 
     def run(self):
@@ -144,7 +145,7 @@ class TestHAWC2SAeroElasticSolver(object):
         config['HAWC2Wrapper'] = cf
 
         cf = {}
-        cf['wsp'] = [4, 5, 7]
+        cf['wsp'] = [4, 5, 7, 10, 25]
         cf['user'] = [{'wsp': 70, 'pitch': 80, 'rpm': 0.01}]
         config['cases'] = cf
 

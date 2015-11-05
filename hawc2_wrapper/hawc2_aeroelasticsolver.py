@@ -281,6 +281,15 @@ class OutputsAggregator(Component):
                 out = params[p_name]
                 unknowns[sensor][i, :] = out[0, j*self.naes:(j+1)*self.naes]
 
+        fid = open('Rotor_loads.dat', 'w')
+        fmt = '#'+'%23s '+(len(self.sensor_rotor)-1)*'%24s '+'\n'
+        fid.write(fmt % tuple(self.sensor_rotor))
+        for i in range(self.n_cases):
+            for j, sensor in enumerate(self.sensor_rotor):
+                fid.write('%24.15e ' % unknowns[sensor][i])
+            fid.write('\n')
+        fid.close()
+
 
 class HAWC2SAeroElasticSolver(Group):
     """
