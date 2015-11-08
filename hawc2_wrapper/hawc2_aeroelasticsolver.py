@@ -93,6 +93,7 @@ class HAWC2SWorkflow(Component):
 
         self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
+        self.geom.c12axis_init[:, :3] /= self.geom.c12axis_init[-1, 2]
         if self.with_geom:
             self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                              'chord', 'rthick', 'p_le']
@@ -149,8 +150,14 @@ class HAWC2SWorkflow(Component):
         self.wrapper.compute()
         self.output.execute()
 
-        unknowns['outputs_rotor'] = self.output.outputs_rotor
-        unknowns['outputs_blade'] = self.output.outputs_blade
+        try:
+            unknowns['outputs_rotor'] = self.output.outputs_rotor
+        except:
+            pass
+        try:
+            unknowns['outputs_blade'] = self.output.outputs_blade
+        except:
+            pass
 
         os.chdir(self.basedir)
         # if not self.keep_work_dirs:
@@ -361,8 +368,10 @@ class HAWC2SAeroElasticSolver(Group):
             for v in var:
                 promote.append(v)
             promote.append('blade_length')
-
-        self.add('aggregate', OutputsAggregator(config, len(cases_list)))
+        # these should be converted to FUSED-Wind variables
+        # but we'll just promote them for now
+        promotions = config['HAWC2SOutputs']['blade'] + config['HAWC2SOutputs']['rotor']
+        self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
         for i, case_id in enumerate(cases_list):
