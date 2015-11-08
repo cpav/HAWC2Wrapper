@@ -1,5 +1,7 @@
 import copy
 import numpy as np
+import os
+import shutil
 
 from openmdao.api import Component, Group, ParallelGroup
 
@@ -50,6 +52,10 @@ class HAWC2SWorkflow(Component):
     """
     def __init__(self, config, case_id, case, cs_size, pfsize):
         super(HAWC2SWorkflow, self).__init__()
+
+        self.basedir = os.getcwd()
+        self.keep_work_dirs = False
+
         self.with_structure = config['with_structure']
         self.with_geom = config['with_geom']
         self.with_tsr = config['with_tsr']
@@ -99,6 +105,14 @@ class HAWC2SWorkflow(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
+        workdir = 'hawc2s_model_%s_%i' % (self.writer.case_id, self.__hash__())
+
+        try:
+            os.mkdir(workdir)
+        except:
+            pass
+        os.chdir(workdir)
+
         vt = self.writer.vartrees
         if self.with_tsr:
             vt.dlls.risoe_controller.dll_init.designTSR = \
@@ -137,6 +151,10 @@ class HAWC2SWorkflow(Component):
 
         unknowns['outputs_rotor'] = self.output.outputs_rotor
         unknowns['outputs_blade'] = self.output.outputs_blade
+
+        os.chdir(self.basedir)
+        # if not self.keep_work_dirs:
+        #     shutil.rmtree(workdir)
 
     def _array2hawc2beamstructure(self, blade_length, body, body_st):
 
