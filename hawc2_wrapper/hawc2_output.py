@@ -405,7 +405,7 @@ class HAWC2SOutput(HAWC2SOutputBase):
     def __init__(self):
         super(HAWC2SOutput, self).__init__()
         self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT', 'Mx',
-                        'My', 'Mz', 'tip_rot', 'Fx', 'Fy']
+                        'My', 'Mz', 'Fx', 'Fy']
         self.outlist2 = ['aoa', 'Ft', 'Fn', 'cl', 'cd', 'cm', 'ct', 'cp',
                          'v_a', 'v_t', 'disp_x', 'disp_y',
                         'disp_z', 'disp_rot_z']
@@ -478,8 +478,6 @@ class HAWC2SOutput(HAWC2SOutputBase):
             self.disp_y[iw, :] = main_axis[:, 1]
             self.disp_z[iw, :] = main_axis[:, 2]
             self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
-            self.tip_rot[iw] = np.interp(0.98,
-                                         self.s, data[:, 28] * 180. / np.pi)
 
 
 class HAWC2SOutputCompact(HAWC2SOutput):
@@ -525,7 +523,7 @@ class HAWC2SOutputCompact(HAWC2SOutput):
         for i, sensor in enumerate(self.sensor_rotor):
             self.outputs_rotor[:, i] = getattr(self, sensor)
 
-        self.outputs_blade = np.zeros([nW, len(self.sensor_rotor)*nS])
+        self.outputs_blade = np.zeros([nW, len(self.sensor_blade)*nS])
         for i, sensor in enumerate(self.sensor_blade):
             self.outputs_blade[:, i*nS:(i+1)*nS] = getattr(self, sensor)
 
