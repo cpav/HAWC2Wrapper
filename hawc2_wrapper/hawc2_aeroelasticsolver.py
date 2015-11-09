@@ -167,7 +167,7 @@ class HAWC2SWorkflow(Component):
 
         bset = body.body_set[1] - 1
         if body.st_input_type is 0:
-            body.beam_structure[bset].s = body_st[:, 0]*blade_length
+            body.beam_structure[bset].s = body_st[:, 0]
             body.beam_structure[bset].dm = body_st[:, 1]
             body.beam_structure[bset].x_cg = body_st[:, 2]
             body.beam_structure[bset].y_cg = body_st[:, 3]
