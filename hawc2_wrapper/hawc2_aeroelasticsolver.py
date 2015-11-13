@@ -237,12 +237,15 @@ class HAWC2SWorkflow(Component):
             vt.h2s.pitch_curve = case['pitch']
             vt.h2s.rpm_curve = case['rpm']
 
-            if isinstance(vt.h2s.wsp_curve, int):
+            if isinstance(vt.h2s.wsp_curve, (int, float)):
                 nws = 1
             else:
                 nws = len(vt.h2s.wsp_curve)
 
-            vt.h2s.commands.remove('compute_optimal_pitch_angle')
+            try:
+                vt.h2s.commands.remove('compute_optimal_pitch_angle')
+            except:
+                pass
 
             if np.min(vt.h2s.rpm_curve) < 0.1:
                 try:
