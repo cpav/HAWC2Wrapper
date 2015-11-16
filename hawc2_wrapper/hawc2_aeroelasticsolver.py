@@ -148,7 +148,8 @@ class HAWC2SWorkflow(Component):
 
         self.writer.execute()
         self.wrapper.compute()
-        self.output.execute()
+        if self.wrapper.success:
+            self.output.execute()
 
         try:
             unknowns['outputs_rotor'] = self.output.outputs_rotor

@@ -84,11 +84,17 @@ class HAWC2Wrapper(object):
 
         if not self.dry_run:
             print exec_str
-            proc = subprocess.check_output(exec_str)
-            print self.hawc2bin, 'output:'
-            print proc
+            try:
+                proc = subprocess.check_output(exec_str)
+                self.success = True
+                print self.hawc2bin, 'output:'
+                print proc
+            except:
+                self.success = False
+                print self.hawc2bin, ' crashed for case %s'%self.case_id
         else:
             print self.hawc2bin + ' dry run...'
+            self.success = True
 
         if 'hawc2s' in self.hawc2bin.lower():
             self.check_log(['Error', 'iterations exceeded'])
@@ -99,7 +105,7 @@ class HAWC2Wrapper(object):
         if self.copyback_results:
             self.copy_results()
 
-        print 'HAWC2Wrapper simulation time: %f' % (time.time() - tt)
+        print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id, time.time() - tt)
 
     def copy_results(self):
         """
