@@ -6,7 +6,13 @@ import zipfile
 import glob
 import shutil
 import time
-import subprocess
+try:
+    import subprocess32 as subprocess
+    _with_timeout = True
+except:
+    import subprocess
+    _with_timeout = False
+    print 'Warning: reinstall wrapper or download subprocess32 package!'
 import warnings
 
 
@@ -57,6 +63,7 @@ class HAWC2Wrapper(object):
         self.copyback_results_dir = 'res_copy'
 
         self.dry_run = False
+        self.timeout = 600
 
         self.basedir = os.getcwd()
 
@@ -85,7 +92,10 @@ class HAWC2Wrapper(object):
         if not self.dry_run:
             print exec_str
             try:
-                proc = subprocess.check_output(exec_str)
+                if _with_timeout:
+                    proc = subprocess.check_output(exec_str, timeout=self.timeout)
+                else:
+                    proc = subprocess.check_output(exec_str)
                 self.success = True
                 print self.hawc2bin, 'output:'
                 print proc

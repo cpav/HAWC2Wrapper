@@ -22,6 +22,7 @@ kwargs = {'author': '',
  #'package_data': {'hawc2_wrapper': []},
  #'package_dir': {'': 'hawc2_wrapper'},
  'packages': ['hawc2_wrapper'],
+ 'install_requires': ['subprocess32'],
  'url': '',
  'version': '0.1',
  'zip_safe': False}
