@@ -342,7 +342,7 @@ class HAWC2SAeroElasticSolver(Group):
         Configuration dictionary.
 
     """
-    def __init__(self, config, cs_size, pfsize):
+    def __init__(self, config, cs_size=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
         # check that the config is ok
