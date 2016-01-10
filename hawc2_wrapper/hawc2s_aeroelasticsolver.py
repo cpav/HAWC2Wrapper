@@ -9,7 +9,7 @@ from hawc2_inputreader import HAWC2InputReader
 from hawc2_inputwriter import HAWC2SInputWriter
 from hawc2_wrapper import HAWC2Wrapper
 from hawc2_output import HAWC2SOutputCompact
-from hawc2_geomIDO import HAWC2GeometryBuilder
+from hawc2_geometry import HAWC2GeometryBuilder
 
 
 class HAWC2SWorkflow(Component):
