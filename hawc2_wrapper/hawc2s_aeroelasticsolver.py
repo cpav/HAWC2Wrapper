@@ -50,7 +50,7 @@ class HAWC2SWorkflow(Component):
         respectively.
 
     """
-    def __init__(self, config, case_id, case, cs_size, pfsize):
+    def __init__(self, config, case_id, case, cssize, pfsize):
         super(HAWC2SWorkflow, self).__init__()
 
         self.basedir = os.getcwd()
@@ -89,7 +89,7 @@ class HAWC2SWorkflow(Component):
             self.add_param('tsr', 0.)
 
         if self.with_structure:
-            self.add_param('blade_beam_structure', shape=cs_size)
+            self.add_param('blade_beam_structure', shape=cssize)
 
         self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
@@ -342,7 +342,7 @@ class HAWC2SAeroElasticSolver(Group):
         Configuration dictionary.
 
     """
-    def __init__(self, config, cs_size=None, pfsize=None):
+    def __init__(self, config, cssize=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
         # check that the config is ok
@@ -380,7 +380,7 @@ class HAWC2SAeroElasticSolver(Group):
 
         for i, case_id in enumerate(cases_list):
             pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id],
-                                           cs_size, pfsize), promotes=promote)
+                                           cssize, pfsize), promotes=promote)
 
             self.connect('pg.%s.outputs_rotor' % case_id,
                          'aggregate.outputs_rotor_%d' % i)
