@@ -313,7 +313,7 @@ class HAWC2SOutputBase(object):
                 wsp_files = glob.glob(self.case_id+'_u*.ind')
                 if len(wsp_files) > 0:
                     for f in wsp_files:
-                        w = float(re.sub('\%s' % self.case_id + '_u',
+                        w = float(re.sub('%s' % self.case_id + '_u',
                                          '', f).strip('.ind'))/1000.
                         wsp_array.append(w)
                     wsp_array.sort()
