@@ -216,7 +216,7 @@ def read_hawc2_st_file(filename, setnum=-1):
             st_sets.append(st)
 
         if line.find('#') != -1:
-            if (int(line[1:2]) == setnum) or setnum == -1:
+            if (int(line[1:].split()[0]) == setnum) or setnum == -1:
                 right_set = True
             else:
                 right_set = False
