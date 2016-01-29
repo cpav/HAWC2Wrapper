@@ -226,10 +226,12 @@ class HAWC2SWorkflow(Component):
                 vt.dlls.risoe_controller.dll_init.Vin = case
                 vt.dlls.risoe_controller.dll_init.Vout = case
                 vt.dlls.risoe_controller.dll_init.nV = 1
+                vt.h2s.wsp_cases = np.asarray([case])
             else:
                 vt.dlls.risoe_controller.dll_init.Vin = case[0]
                 vt.dlls.risoe_controller.dll_init.Vout = case[-1]
                 vt.dlls.risoe_controller.dll_init.nV = len(case)
+                vt.h2s.wsp_cases = np.asarray(case)
             nws = vt.dlls.risoe_controller.dll_init.nV
 
         else:

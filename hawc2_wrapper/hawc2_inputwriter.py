@@ -32,8 +32,8 @@ def write_pcfile(path, pc):
             fid.write('%i %i %f %s\n' %
                       (j + 1, polar.aoa.shape[0], polar.rthick, polar.desc))
             for k in range(polar.aoa.shape[0]):
-                fid.write((4*'%24.15e '+'\n') % (polar.aoa[k], polar.cl[k],
-                                                 polar.cd[k], polar.cm[k]))
+                fid.write((4*'%.17e '+'\n') % (polar.aoa[k], polar.cl[k],
+                                               polar.cd[k], polar.cm[k]))
     fid.close()
 
 
@@ -48,7 +48,7 @@ def write_aefile(path, b):
                      b.chord,
                      np.minimum(100., b.rthick),
                      b.aeset]).T
-    np.savetxt(fid, data, fmt="%.20e %.20e %.20e %i")
+    np.savetxt(fid, data, fmt="%.17e %.17e %.17e %i")
     fid.close()
 
 
@@ -190,8 +190,8 @@ class HAWC2InputWriter(object):
             except:
                 pass
 
-        if not os.path.exists(self.data_directory):
-            os.mkdir(self.data_directory)
+        # if not os.path.exists(self.data_directory):
+        #     os.mkdir(self.data_directory)
 
     def execute(self):
 
@@ -477,7 +477,7 @@ class HAWC2InputWriter(object):
             main_body.append('begin c2_def')
             main_body.append('  nsec %i' % body.c12axis.shape[0])
             for i in range(body.c12axis.shape[0]):
-                main_body.append('  sec %2i' % (i+1) + 4*' %22.15e' %
+                main_body.append('  sec %2i' % (i+1) + 4*' %.17e' %
                                  tuple(body.c12axis[i, :]))
             main_body.append('end c2_def')
             if len(body.beam_structure) > 0:
@@ -841,16 +841,33 @@ class HAWC2SInputWriter(HAWC2InputWriter):
         h2s = self.vartrees.h2s
 
         # Write opt file only if it is not computed by HS2
+        wsp = []
+        rpm = []
+        pitch = []
         if 'compute_optimal_pitch_angle' not in h2s.commands:
-
+            if len(h2s.wsp_cases) > 0:
+                for w in h2s.wsp_cases:
+                    rpm.append(np.interp(h2s.wsp_cases, h2s.wsp_curve, h2s.rpm_curve))
+                    pitch.append(np.interp(h2s.wsp_cases, h2s.wsp_curve, h2s.pitch_curve))
+                    wsp.append(w)
+        for case in h2s.cases:
+            try:
+                wsp.append(case['wsp'])
+                pitch.append(case['pitch'])
+                rpm.append(case['rpm'])
+            except:
+                pass
+        if len(wsp) > 0:
+            data = np.array([wsp, pitch, rpm]).T
+        else:
             data = np.array([h2s.wsp_curve, h2s.pitch_curve, h2s.rpm_curve]).T
-            if len(data.shape) == 1:
-                data = np.array([data])
-            fid = open(self.case_id + '.opt', 'w')
-            fid.write(('%i Wind speed [m/s]          Pitch [deg]     ' +
-                      'Rot. speed [rpm]\n') % data.shape[0])
-            np.savetxt(fid, data)
-            fid.close()
+            # if len(data.shape) == 1:
+            #     data = np.array([data])
+        fid = open(self.case_id + '.opt', 'w')
+        fid.write(('%i Wind speed [m/s]          Pitch [deg]     ' +
+                  'Rot. speed [rpm]\n') % data.shape[0])
+        np.savetxt(fid, data)
+        fid.close()
 
     def _write_hawcstab2_structure(self):
 
