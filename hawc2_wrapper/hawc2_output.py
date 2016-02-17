@@ -434,7 +434,7 @@ class HAWC2SOutput(HAWC2SOutputBase):
         self.Mz = data[:, 5]
 
         nW = len(self.wsp)
-        nS = len(self.blade_loads_data[0][:, 0])
+        nS = self.blade_loads_data[0].shape[0]
 
         self.tip_rot = np.zeros(nW)
         self.disp_x = np.zeros((nW, nS))

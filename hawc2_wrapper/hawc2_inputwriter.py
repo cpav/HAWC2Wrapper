@@ -847,8 +847,8 @@ class HAWC2SInputWriter(HAWC2InputWriter):
         if 'compute_optimal_pitch_angle' not in h2s.commands:
             if len(h2s.wsp_cases) > 0:
                 for w in h2s.wsp_cases:
-                    rpm.append(np.interp(h2s.wsp_cases, h2s.wsp_curve, h2s.rpm_curve))
-                    pitch.append(np.interp(h2s.wsp_cases, h2s.wsp_curve, h2s.pitch_curve))
+                    rpm.append(np.interp(w, h2s.wsp_curve, h2s.rpm_curve))
+                    pitch.append(np.interp(w, h2s.wsp_curve, h2s.pitch_curve))
                     wsp.append(w)
         for case in h2s.cases:
             try:
