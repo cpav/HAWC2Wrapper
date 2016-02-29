@@ -861,8 +861,8 @@ class HAWC2SInputWriter(HAWC2InputWriter):
             data = np.array([wsp, pitch, rpm]).T
         else:
             data = np.array([h2s.wsp_curve, h2s.pitch_curve, h2s.rpm_curve]).T
-            # if len(data.shape) == 1:
-            #     data = np.array([data])
+        if len(data.shape) == 1:
+            data = np.array([data])
         fid = open(self.case_id + '.opt', 'w')
         fid.write(('%i Wind speed [m/s]          Pitch [deg]     ' +
                   'Rot. speed [rpm]\n') % data.shape[0])
