@@ -720,4 +720,3 @@ class HAWC2InputReader(object):
 if __name__ == '__main__':
 
     pass
-
