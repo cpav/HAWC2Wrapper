@@ -239,8 +239,7 @@ class HAWC2InputWriter(object):
                    tuple(self.vartrees.sim.convergence_limits))
         sim.append('on_no_convergence continue')
         sim.append('max_iterations %i' % self.vartrees.sim.max_iterations)
-        sim.append('logfile %s' %
-                   (os.path.join(self.log_directory, self.case_id + '.log')))
+        sim.append('logfile %s' % self.vartrees.sim.logfile)
         sim.append('begin newmark')
         sim.append('  deltat    %1.3f' % self.vartrees.sim.newmark_deltat)
         sim.append('end newmark')
@@ -645,7 +644,7 @@ class HAWC2InputWriter(object):
 
         sns = []
         sns.append('begin output')
-        sns.append('  filename %s' % (os.path.join(self.res_directory,
+        sns.append('  filename %s' % (os.path.join(self.vartrees.output.res_dir,
                                                    self.case_id)))
         sns.append('  time %3.6f %3.6f' % (self.vartrees.output.time_start,
                                            self.vartrees.sim.time_stop))
