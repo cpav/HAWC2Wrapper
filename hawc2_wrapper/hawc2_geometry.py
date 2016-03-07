@@ -24,8 +24,6 @@ class HAWC2GeometryBuilder(object):
 
     blade_length: float
 
-    hub_radius: float
-
     returns
     -------
     blade_ae: HAWC2BladeGeometry
@@ -65,7 +63,6 @@ class HAWC2GeometryBuilder(object):
         # scale main axis according to radius
         self.c12axis[:, :3] *= self.blade_length
 
-        self.blade_ae.radius = self.blade_length + self.hub_radius
         l = ((self.c12axis[1:, 0]-self.c12axis[:-1, 0])**2 +
              (self.c12axis[1:, 1]-self.c12axis[:-1, 1])**2 +
              (self.c12axis[1:, 2]-self.c12axis[:-1, 2])**2)**.5
