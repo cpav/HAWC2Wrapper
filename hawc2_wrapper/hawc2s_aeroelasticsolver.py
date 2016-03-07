@@ -91,7 +91,7 @@ class HAWC2SWorkflow(Component):
             self.add_param('tsr', 0.)
 
         if self.with_structure:
-            if config['beamFPM']:
+            if config['hawc2_FPM']:
                 cssize = (config['structural_sections'], 30)
             else:
                 cssize = (config['structural_sections'], 19)
@@ -451,6 +451,12 @@ class HAWC2SAeroElasticSolver(Group):
             config['with_structure'] = False
             print 'Structural properties are not set as parameters because' +\
                   ' no option "with_structure" was given in the configuration.'
+
+        if 'with_sectional_forces' not in config.keys():
+            config['with_sectional_forces'] = False
+            print 'config parameter "with_sectional_forces" not set' +\
+                  'set to True to output sectional forces (fext files)'
+
         if 'hawc2_FPM' not in config.keys():
             config['hawc2_FPM'] = False
             print 'hawc2_FPM not supplied: structural properties assumed to be ' +\
@@ -473,29 +479,6 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 
-
-#    def configure_freq_placement(self, freq_type='ae'):
-#
-#        self.h2.configure_freq_placement_cid(freq_type=freq_type)
-#        self.connect('h2.freq_factor', 'h2post.freq_factor_cid')
-#        self.create_passthrough('h2post.freq_factor')
-#        self.create_passthrough('h2.mode_freq')
-#        self.create_passthrough('h2.mode_damp')
-#        self.create_passthrough('h2.mode_target_freq')
-#        self.create_passthrough('h2.mode_target_damp')
-#
-#    def configure_controller_tuning(self):
-#
-#        self.controller = self.reader.vartrees.dlls.risoe_controller.dll_init.copy()
-#        for att in self.controller.list_vars():
-#            if att == 'designTSR':
-#                continue
-#            self.connect('controller.'+att,
-#                         'casegen.vartrees.dlls.risoe_controller.dll_init.'+att)
-#            self.connect('controller.'+att,
-#                         'vartrees_out.dlls.risoe_controller.dll_init.'+att)
-#
-#    """
 
 if __name__ == '__main__':
 
