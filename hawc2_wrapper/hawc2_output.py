@@ -1,177 +1,60 @@
 """
+Module containing classes to read HAWC2 and HAWCStab2 results and perform basic
+postprocessing.
 """
 import numpy as np
-import os
 import glob
 import re
+from wetb.prepost import Simulations
 
 from hawc2_vartrees import DTUBasicControllerVT
 
 
-class HAWC2Dataset(object):
+class HAWC2Output(object):
     """
+    Class that reads an HAWC2 output file and computes statistics and damage
+    equivalent load of all the channels in the file.
+
+    Parameters
+    ----------
+
+    case_tags: dict
+        Dictionary with tags as keys. Keys required [run_dir], [res_dir], and
+        [case_id].
+    m: list
+        Values of the slope of the SN curve.
+    no_bins: int
+        Number of bins for the binning of the amplitudes.
+    neq: int
+        Number of equivalent cycles
+
+
+    Returns
+    -------
+    stats: dict
+        Dictionary containing lists of the statistics of each channel. The keys
+        are 'std', 'rms', 'min', 'int', 'max', 'range', 'absmax', and 'mean'.
+    eq: list
+        List containing a list of each channel containing the damage equivalent
+        load for each value of m.
 
     """
-    # TODO: link with pdap!!!!
-    def __init__(self, casename=None, readonly=False):
-
-        self.casename = casename
-        self.readonly = readonly
-        self.iknown = []
-        self.data = None
-
-        if os.path.isfile(self.casename + ".sel"):
-            self._read_hawc2_sel_file()
-
-        else:
-            print "file not found: ", casename + '.sel'
-
-    def _read_hawc2_sel_file(self):
-        """
-        Some title
-        ==========
-
-        Parameters
-        ----------
-        signal : ndarray
-            some description
-
-        Returns
-        -------
-        output : int
-            describe variable
-        """
-
-        # read *.sel hawc2 output file for result info
-        fid = open(self.casename + '.sel', 'r')
-        lines = fid.readlines()
-        fid.close()
-
-        # find general result info (number of scans, number of channels,
-        # simulation time and file format)
-        temp = lines[8].split()
-        self.scans = int(temp[0])
-        self.channels = int(temp[1])
-        self.total_time = float(temp[2])
-        self.frequency = self.scans / self.total_time
-        self.timestep = 1. / self.frequency
-        self.time = np.linspace(0, self.total_time, self.scans)
-        self.format = temp[3]
-        # reads channel info (name, unit and description)
-        name = []
-        unit = []
-        description = []
-        for i in range(0, self.channels):
-            temp = str(lines[i + 12][12:43])
-            name.append(temp.strip())
-            temp = str(lines[i + 12][43:50])
-            unit.append(temp.strip())
-            temp = str(lines[i + 12][54:100])
-            description.append(temp.strip())
-        self.chinfo = {'name': name, 'unit': unit, 'desc': description}
-        # if binary file format, scaling factors are read
-        if self.format.lower() == 'binary':
-            self.scale_factor = np.zeros(self.channels)
-            self.fileformat = 'HAWC2_BINARY'
-            for i in range(0, self.channels):
-                self.scale_factor[i] = float(lines[i + 12 + self.channels + 2])
-        else:
-            self.fileformat = 'HAWC2_ASCII'
-
-    def _read_binary(self, channel_ids=[]):
-        """Read results in binary format"""
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        fid = open(self.casename + '.dat', 'rb')
-        data = np.zeros((self.scans, len(channel_ids)))
-        j = 0
-        for i in channel_ids:
-            fid.seek(i * self.scans * 2, 0)
-            data[:, j] = np.fromfile(fid, 'int16', self.scans) * self.scale_factor[i]
-            j += 1
-        fid.close()
-        return data
-
-    def _read_ascii(self, channel_ids=[]):
-        """Read results in ASCII format"""
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        temp = np.loadtxt(self.casename + '.dat', usecols=channel_ids)
-        return temp.reshape((self.scans, len(channel_ids)))
-
-    def _read(self, channel_ids=[]):
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        if self.fileformat == 'HAWC2_BINARY':
-            return self._read_binary(channel_ids)
-        elif self.fileformat == 'HAWC2_ASCII':
-            return self._read_ascii(channel_ids)
-
-    def read_all(self):
-
-        self.data = self._read()
-        self.iknown = range(0, self.channels)
-
-    def get_channels(self, channel_ids=[]):
-        """  """
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        elif max(channel_ids) >= self.channels:
-            print "channel number out of range"
-            return
-
-        if self.readonly:
-            return self._read(channel_ids)
-
-        else:
-            # sort into known channels and channels to be read
-            I1 = []
-            I2 = []   # I1=Channel mapping, I2=Channels to be read
-            for i in channel_ids:
-                try:
-                    I1.append(self.iknown.index(i))
-                except:
-                    self.iknown.append(i)
-                    I2.append(i)
-                    I1.append(len(I1))
-            # read new channels
-            if I2:
-                temp = self._read(I2)
-                # add new channels to Data
-                if isinstance(self.data, np.ndarray):
-                    self.data = np.append(self.data, temp, axis=1)
-                # if first call, data is empty
-                else:
-                    self.data = temp
-            return self.data[:, tuple(I1)]
-
-
-class HAWC2OutputBase(object):
-
     def __init__(self):
 
-        self.datasets = HAWC2Dataset()
-        self.case_id = 'hawc2_case'
-        self.res_directory = ''
+        self.eq = []
+        self.stats = []
 
-    def execute(self):
+    def execute(self, case_tags, m=[3, 4, 6, 8, 10, 12], no_bins=128, neq=600):
 
-        self._logger.info('reading outputs for case %s ...' % (self.case_id))
-        # this is fragile since it will grab all files
-        # which may be old ...
+        print 'reading outputs for case %s ...' % case_tags['[case_id]']
 
-        self.datasets = []
-        sets = glob.glob(self.res_directory+'\*.sel')
-
-        for s in sets:
-            name = re.sub("\.sel$", '', s)
-            case = HAWC2Dataset(casename=name)
-            case.read_all()
-            self.datasets.append(case)
+        case = Simulations.Cases(case_tags)
+        case.load_result_file(case_tags)
+        self.stats = case.res.calc_stats(case.sig)
+        self.eq = []
+        for s in case.sig.T:
+            self.eq.append(case.res.calc_fatigue(s, no_bins=no_bins, neq=neq,
+                                                 m=m))
 
 
 class HAWC2SOutputBase(object):
@@ -404,11 +287,11 @@ class HAWC2SOutput(HAWC2SOutputBase):
     """
     def __init__(self):
         super(HAWC2SOutput, self).__init__()
-        self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT', 'Mx',
-                        'My', 'Mz', 'Fx', 'Fy']
+        self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT',
+                         'Mx', 'My', 'Mz', 'Fx', 'Fy']
         self.outlist2 = ['aoa', 'Ft', 'Fn', 'cl', 'cd', 'cm', 'ct', 'cp',
                          'v_a', 'v_t', 'disp_x', 'disp_y',
-                        'disp_z', 'disp_rot_z']
+                         'disp_z', 'disp_rot_z']
 
     def execute(self):
         if ('save_power' not in self.commands) or \
