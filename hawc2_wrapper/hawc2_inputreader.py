@@ -632,8 +632,11 @@ class HAWC2InputReader(object):
 
         self.set_entry(self.vartrees.h2s, section, 'operational_data_filename')
 
-        if 'compute_optimal_pitch_angle' not in self.vartrees.h2s.commands:
+        try:
             self.read_operational_data_file()
+        except:
+            print 'Warning: couldn''t read operational file %s' % \
+                self.vartrees.h2s.operational_data_filename
 
     def _add_hawc2s_body(self, section):
 

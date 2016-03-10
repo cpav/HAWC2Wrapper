@@ -13,10 +13,9 @@ from hawc2_geometry import HAWC2GeometryBuilder
 
 
 class HAWC2SWorkflow(Component):
-    """
-    OpenMDAO component to run the HAWC2S workflow.
+    """OpenMDAO component to run the HAWC2S workflow.
 
-    parameters
+    Parameters
     ----------
     config: dict
         Configuration dictionary. It has to contain the following entries:
@@ -49,6 +48,9 @@ class HAWC2SWorkflow(Component):
         parameter is a list containing wind speed, rotorspeed and pitch angle
         respectively.
 
+    Returns
+    -------
+    
     """
     def __init__(self, config, case_id, case):
         super(HAWC2SWorkflow, self).__init__()
