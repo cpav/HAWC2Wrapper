@@ -14,7 +14,7 @@ def assert_differet_types(self, val, var, vt):
         self.assertEqual(val, getattr(vt, var))
     if type(val) == np.ndarray:
         for i in range(len(val)):
-            self.assertEqual(val[i], getattr(vt, var)[i])
+            self.assertAlmostEqual(val[i], getattr(vt, var)[i], places=14)
     else:
         self.assertAlmostEqual(val, getattr(vt, var), places=14)
 
@@ -105,14 +105,13 @@ class Test(unittest.TestCase):
 
             assert_differet_types(self, val, var, reader.vartrees.sim)
 
-    def test_IO_Aerodrag(self):
+    def _test_IO_Aerodrag(self):
 
         init = read_htc('main_h2.htc')
 
         writer = HAWC2InputWriter()
 
         for var in init.vartrees.aerodrag.elements[0].var:
-            print var
             writer.vartrees = copy.deepcopy(init.vartrees)
             val = np.ceil(np.random.rand()*10)
             
@@ -126,6 +125,74 @@ class Test(unittest.TestCase):
             reader = read_htc('h2s.htc')
             assert_differet_types(self, val, var, reader.vartrees.aerodrag.elements[0])
 
+    def _test_IO_Bodies(self):
+
+        init = read_htc('main_h2.htc')
+
+        writer = HAWC2InputWriter()
+
+        for var in init.vartrees.main_bodies.blade1.var:
+            print var
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            
+            val = np.ceil(np.random.rand()*10)
+            if var in ['body_name', 'body_type']:
+                val = 'blade1'
+            if var == 'st_input_type':
+                val = 0
+                
+            setattr(writer.vartrees.main_bodies.blade1, var, val)
+
+            writer.case_id = 'h2s'
+            writer.execute()
+
+            reader = read_htc('h2s.htc')
+            assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1)
+
+    def test_IO_BeamStructure(self):
+
+        init = read_htc('main_h2.htc')
+
+        writer = HAWC2InputWriter()
+        writer.vartrees = copy.deepcopy(init.vartrees)
+        
+        for iset in range(2):
+            for var in writer.vartrees.main_bodies.blade1.beam_structure[iset].var:
+                n = len(writer.vartrees.main_bodies.blade1.beam_structure[iset].s)
+                writer.vartrees = copy.deepcopy(init.vartrees)
+
+                val = np.random.rand(n)
+    
+                setattr(writer.vartrees.main_bodies.blade1.beam_structure[iset], var, val)
+    
+                writer.case_id = 'h2s'
+                writer.execute()
+    
+                reader = read_htc('h2s.htc')
+                assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1.beam_structure[iset])
+
+    def test_IO_BeamStructure_FPM(self):
+
+        init = read_htc('main_h2_FPM.htc')
+
+        writer = HAWC2InputWriter()
+        writer.vartrees = copy.deepcopy(init.vartrees)
+        
+        for iset in range(2):
+            for var in writer.vartrees.main_bodies.blade1.beam_structure[iset].var:
+                n = len(writer.vartrees.main_bodies.blade1.beam_structure[iset].s)
+                writer.vartrees = copy.deepcopy(init.vartrees)
+
+                val = np.random.rand(n)
+    
+                setattr(writer.vartrees.main_bodies.blade1.beam_structure[iset], var, val)
+    
+                writer.case_id = 'h2s'
+                writer.execute()
+    
+                reader = read_htc('h2s.htc')
+                assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1.beam_structure[iset])
+                
 if __name__ == '__main__':
 
     unittest.main()

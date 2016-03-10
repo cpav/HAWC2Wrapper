@@ -52,16 +52,17 @@ def write_aefile(path, b):
     fid.close()
 
 
-def write_stfile(path, body, case_id):
+def write_stfile(body, case_id):
 
     """write the beam structural data to an st_filename"""
+    exp_prec = 15             # exponential precesion
+    col_width = exp_prec + 8  # column width required for exp precision
     if body.st_input_type is 0:
         header = ['r', 'm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'x_sh', 'y_sh',
                   'E', 'G', 'I_x', 'I_y', 'K', 'k_x', 'k_y', 'A', 'pitch',
                   'x_e', 'y_e']
         # for readable files with headers above the actual data column
-        exp_prec = 15             # exponential precesion
-        col_width = exp_prec + 8  # column width required for exp precision
+
         header_full = '='*20*col_width + '\n'
         header_full += ''.join([(hh + ' [%i]').center(col_width + 1) % i
                                for i, hh in enumerate(header)])+'\n'
@@ -74,78 +75,23 @@ def write_stfile(path, body, case_id):
                   'K_35', 'K_36', 'K_44', 'K_45', 'K_46', 'K_55', 'K_56',
                   'K_66']
         # for readable files with headers above the actual data column
-        exp_prec = 15             # exponential precesion
-        col_width = exp_prec + 8  # column width required for exp precision
         header_full = '='*32*col_width + '\n'
         header_full += ''.join([(hh + ' [%i]').center(col_width + 1) % i
                                 for i, hh in enumerate(header)])+'\n'
         header_full += '='*32*col_width + '\n'
 
-    fid = open(path, 'w')
+    fid = open(body.st_filename, 'w')
     fid.write('%i  number of sets, Nset\n' % body.body_set[1])
     fid.write('-----------------\n')
     fid.write('#1 written using the HAWC2 OpenMDAO wrapper\n')
     fid.write('Case ID: %s\n' % case_id)
-    if body.st_input_type is 0:
-        for i, st in enumerate(body.beam_structure):
-            fid.write(header_full)
-            fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
-            data = np.array([st.s,
-                             st.dm,
-                             st.x_cg,
-                             st.y_cg,
-                             st.ri_x,
-                             st.ri_y,
-                             st.x_sh,
-                             st.y_sh,
-                             st.E,
-                             st.G,
-                             st.I_x,
-                             st.I_y,
-                             st.K,
-                             st.k_x,
-                             st.k_y,
-                             st.A,
-                             st.pitch,
-                             st.x_e,
-                             st.y_e]).T
-            np.savetxt(fid, data, fmt='%'+' %i.%ie' % (col_width, exp_prec))
 
-    else:
-        for i, st in enumerate(body.beam_structure):
-            fid.write(header_full)
-            fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
-            data = np.array([st.s,
-                             st.dm,
-                             st.x_cg,
-                             st.y_cg,
-                             st.ri_x,
-                             st.ri_y,
-                             st.pitch,
-                             st.x_e,
-                             st.y_e,
-                             st.K_11,
-                             st.K_12,
-                             st.K_13,
-                             st.K_14,
-                             st.K_15,
-                             st.K_16,
-                             st.K_22,
-                             st.K_23,
-                             st.K_24,
-                             st.K_25,
-                             st.K_26,
-                             st.K_33,
-                             st.K_34,
-                             st.K_35,
-                             st.K_36,
-                             st.K_44,
-                             st.K_45,
-                             st.K_46,
-                             st.K_55,
-                             st.K_56,
-                             st.K_66]).T
-            np.savetxt(fid, data, fmt='%' + ' %i.%ie' % (col_width, exp_prec))
+    for i, st in enumerate(body.beam_structure):
+        fid.write(header_full)
+        fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
+        data = np.array([getattr(st, var) for var in st.var]).T
+        np.savetxt(fid, data, fmt='%'+' %i.%ie' % (col_width, exp_prec))
+
     fid.close()
 
 
@@ -448,7 +394,7 @@ class HAWC2InputWriter(object):
             main_body.append('copy_main_body %s' % body.copy_main_body)
         else:
             main_body.append('name        %s' % body.body_name)
-            main_body.append('type        timoschenko')
+            main_body.append('type        %s' % body.body_type)
             if body.nbodies < body.c12axis.shape[0]:
                 main_body.append('nbodies     %d' % body.nbodies)
             else:
@@ -467,9 +413,9 @@ class HAWC2InputWriter(object):
                                  tuple(body.concentrated_mass[i]))
             main_body.append('begin timoschenko_input')
             tmpname = ''.join([i for i in body.body_name if not i.isdigit()])
-            main_body.append('  filename %s' %
-                             (os.path.join(self.data_directory, self.case_id +
-                                           '_' + tmpname + '_st.dat')))
+            body.st_filename = (os.path.join(self.data_directory, self.case_id +
+                                           '_' + tmpname + '_st.dat'))
+            main_body.append('  filename %s' % body.st_filename)
             if body.st_input_type is not 0:
                 main_body.append('  FPM %d' % body.st_input_type)
             main_body.append('  set %d %d' % tuple(body.body_set))
@@ -662,55 +608,15 @@ class HAWC2InputWriter(object):
 
     def _write_aefile(self):
 
-        path = os.path.join(self.data_directory, self.case_id + '_ae.dat')
-        write_aefile(path, self.vartrees.blade_ae)
+        write_aefile(self.vartrees.aero.ae_filename, self.vartrees.blade_ae)
 
     def _write_stfile(self, body):
 
-        tmpname = ''.join([i for i in body.body_name if not i.isdigit()])
-        path = os.path.join(self.data_directory,
-                            self.case_id + '_' + tmpname + '_st.dat')
-        write_stfile(path, body, self.case_id)
+        write_stfile(body, self.case_id)
 
     def _write_pcfile(self):
 
-        path = os.path.join(self.data_directory, self.case_id + '_pc.dat')
-        write_pcfile(path, self.vartrees.airfoildata)
-
-
-class HAWC2AeroInputWriter(HAWC2InputWriter):
-    """
-    HAWC2InputWriter-type class to write HAWC2aero files.
-
-    parameters
-    ----------
-        same as for HAWC2InputWriter
-
-    returns
-    -------
-        nothing
-    """
-    def __init__(self):
-        super(HAWC2AeroInputWriter, self).__init__()
-
-    def execute(self):
-
-        self.htc_master = []
-
-        if not os.path.exists(self.data_directory):
-            os.mkdir('data')
-        self.case_idout = self.case_id
-
-        self._write_all()
-        self._write_master()
-        self._write_pcfile()
-        self._write_aefile()
-
-    def _write_all(self):
-
-        self._write_aero()
-        self._write_wind()
-        self._write_output()
+        write_pcfile(self.vartrees.aero.pc_filename, self.vartrees.airfoildata)
 
 
 class HAWC2SInputWriter(HAWC2InputWriter):

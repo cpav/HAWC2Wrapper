@@ -44,7 +44,8 @@ class HAWC2BladeGeometry(object):
 
 class HAWC2BeamStructure(object):
 
-    def __init__(self):
+    def __init__(self, st_type):
+
         self.s = zeros([1])     # Running curve length of beam', units='m
         self.dm = zeros([1])    # Mass per unit length', units='kg/m
         self.x_cg = zeros([1])  # x-distance from blade axis to CM [m]
@@ -91,6 +92,16 @@ class HAWC2BeamStructure(object):
         self.K_56 = zeros([1])  # Elem. 5,6 of Constitutive Mat. [N*m**2]
         self.K_66 = zeros([1])  # Elem. 6,6 of Constitutive Mat. [N*m**2]
 
+        if st_type == 0:
+            self.var = ['s', 'dm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'x_sh',
+                        'y_sh', 'E', 'G', 'I_x', 'I_y', 'K', 'k_x', 'k_y', 'A',
+                        'pitch', 'x_e', 'y_e']
+        else:
+            self.var = ['s', 'dm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'pitch',
+                        'x_e', 'y_e', 'K_11', 'K_12', 'K_13', 'K_14', 'K_15',
+                        'K_16', 'K_22', 'K_23', 'K_24', 'K_25', 'K_26', 'K_33',
+                        'K_34', 'K_35', 'K_36', 'K_44', 'K_45', 'K_46', 'K_55',
+                        'K_56', 'K_66']
 
 class HAWC2OrientationBase(object):
 
@@ -214,11 +225,13 @@ class HAWC2MainBody(object):
         self.damping_posdef = zeros(6)
         self.damping_aniso = zeros(6)
         self.copy_main_body = ''
-        self.c12axis = zeros([1])  # C12 axis containing (x_c12, y_c12, z_c12, twist)
+        self.c12axis = zeros([1, 4])  # C12 axis containing (x_c12, y_c12, z_c12, twist)
         self.concentrated_mass = []
-        self.body_set = array([1, 1])
         self.orientations = []
         self.constraints = []
+        self.var = ['body_name', 'body_type', 'st_input_type',
+                    'body_set', 'nbodies', 'node_distribution', 
+                    'damping_type', 'concentrated_mass', 'orientations', 'constraints']
 
     def add_orientation(self, orientation):
         if orientation == 'base':
@@ -476,6 +489,7 @@ class HAWC2AeroDragElement(object):
         self.sections = []
         self.calculation_points = 2
         self.var = ['mbdy_name', 'dist', 'sections', 'calculation_points']
+
 
 class HAWC2OutputListVT(object):
 
@@ -764,7 +778,6 @@ class HAWC2VarTrees(object):
         self.blade_ae = HAWC2BladeGeometry()
         self.airfoildata = HAWC2AirfoilData()
         self.output = HAWC2OutputVT()
-        self.rotor = RotorVT()
         self.body_order = []
         self.main_bodies = HAWC2MainBodyList()
         self.dlls_order = []

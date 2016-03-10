@@ -1,6 +1,5 @@
 """"""
-from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file, \
-                              read_hawc2_stKfull_file, read_hawc2_pc_file, \
+from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file, read_hawc2_pc_file, \
                               read_hawc2_ae_file
 from hawc2_vartrees import HAWC2VarTrees, HAWC2Simulation, HAWC2Wind,\
                            HAWC2Aero,\
@@ -54,12 +53,6 @@ class HAWC2InputReader(object):
                 self._add_dlls(section)
             elif section.name == 'hawcstab2':
                 self._add_hawcstab2(section)
-
-        # count number of blades
-        for iblade in range(1, 10):
-            if 'blade'+str(iblade) not in self.vartrees.body_order:
-                self.vartrees.rotor.nblades = iblade-1
-                break
 
     def set_entry(self, vt, section, name, h2name=None, required=False):
 
@@ -293,16 +286,18 @@ class HAWC2InputReader(object):
         timo = section.get_entry('timoschenko_input')
         st_type = timo.get_entry('FPM')
         b.body_set = timo.get_entry('set')
+
+        b.st_input_type = 0
         if st_type is not None:
-            stdic = read_hawc2_stKfull_file(timo.get_entry('filename'))
             b.st_input_type = st_type
-        else:
-            stdic = read_hawc2_st_file(timo.get_entry('filename'), b.body_set[0])
-            b.st_input_type = 0
+
+        st = HAWC2BeamStructure(b.st_input_type)
+        stdic = read_hawc2_st_file(timo.get_entry('filename'),
+                                        st.var, b.body_set[0])
         b.body_set[0] = 1
 
         for stset in stdic:
-            st = HAWC2BeamStructure()
+            st = HAWC2BeamStructure(b.st_input_type)
             for k, w in stset.iteritems():
                 setattr(st, k, w)
             b.beam_structure.append(st)
