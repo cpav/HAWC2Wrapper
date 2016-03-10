@@ -178,7 +178,7 @@ class HAWC2SOutputBase(object):
     """
     HAWC2SOutputBase: class that reads HAWC2s output files.
 
-    parameters
+    Parameters
     ----------
     case_id: str
         Name of solution to open.
@@ -186,7 +186,7 @@ class HAWC2SOutputBase(object):
         List containing the strings of the HAWC2s commands that have been
         executed. Only files associated with these commands are read.
 
-    returns
+    Returns
     -------
     operational_data: list
         List containing results included in the .opt file.
@@ -334,10 +334,10 @@ class HAWC2SOutput(HAWC2SOutputBase):
     HAWC2SOutput: HAWC2SOutputBase class that organize results in more general
     arrays.
 
-    parameters
+    Parameters
     ----------
 
-    returns
+    Returns
     -------
     wsp : array [nW]
         Wind speed [m/s].
@@ -434,7 +434,7 @@ class HAWC2SOutput(HAWC2SOutputBase):
         self.Mz = data[:, 5]
 
         nW = len(self.wsp)
-        nS = len(self.blade_loads_data[0][:, 0])
+        nS = self.blade_loads_data[0].shape[0]
 
         self.tip_rot = np.zeros(nW)
         self.disp_x = np.zeros((nW, nS))
@@ -486,10 +486,10 @@ class HAWC2SOutputCompact(HAWC2SOutput):
     compact arrays to minimize the number of outputs. The outputs are selected
     with a dictionary passed in the initialization.
 
-    parameters
+    Parameters
     ----------
 
-    returns
+    Returns
     -------
     outputs_rotor: array
         Rotor outputs.
@@ -533,8 +533,8 @@ class FreqDampTargetByIndex(object):
     Component to compute th cost function for freqeuncies and dampings
     placement given the indexed of the modes
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     freqdamp: array
         Two dimensional array containing the freqeuncies and dampings at
         different operational points.
@@ -554,8 +554,8 @@ class FreqDampTargetByIndex(object):
     freq_factor: list
         RMS of the errors
 
-    example
-    --------
+    Example
+    -------
 
     """
     def __init__(self):
@@ -604,8 +604,8 @@ class ModeTrackingByFreqDamp(object):
     Component to compute the indexes of modes for given frequencies and
     dampings
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     freqdamp: array
         One dimensional array containing the freqeuncies and dampings.
 
@@ -621,8 +621,8 @@ class ModeTrackingByFreqDamp(object):
     mode_index: array
         One dimensional array containing the indexed of the tracked modes.
 
-    example
-    --------
+    Example
+    -------
 
     """
     def __init__(self):
@@ -669,10 +669,10 @@ class ModeTrackingByFreqDamp(object):
 class FreqDampTarget(object):
     """
     Component to compute th cost function for freqeuncies and dampings
-    placement given the indexed of the modes
+    placement given the indexed of the modes.
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     freqdamp: array
         Two dimensional array containing the freqeuncies and dampings at
         different operational points.
@@ -685,13 +685,13 @@ class FreqDampTarget(object):
         Two dimenstional array containing the target values of the dampings at
         operational points. Has to be of the same size as mode_freq.
 
-    results
+    Returns
     -------
     freq_factor: array
         RMS of the errors
 
-    example
-    --------
+    Example
+    -------
 
     """
     def __init__(self):
