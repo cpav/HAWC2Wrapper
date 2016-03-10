@@ -678,7 +678,7 @@ class HAWC2InputReader(object):
 
         self.vartrees.h2s.options = \
             self.set_entry(self.vartrees.h2s.options,
-                           section, 'remove_torque_limits')
+                           section, 'set_torque_limit)
 
     def _add_controller_tuning(self, section):
 
