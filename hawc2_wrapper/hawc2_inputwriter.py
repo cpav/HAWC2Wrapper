@@ -767,8 +767,8 @@ class HAWC2SInputWriter(HAWC2InputWriter):
             data = np.array([wsp, pitch, rpm]).T
         else:
             data = np.array([h2s.wsp_curve, h2s.pitch_curve, h2s.rpm_curve]).T
-            # if len(data.shape) == 1:
-            #     data = np.array([data])
+        if len(data.shape) == 1:
+            data = np.array([data])
         fid = open(self.case_id + '.opt', 'w')
         fid.write(('%i Wind speed [m/s]          Pitch [deg]     ' +
                   'Rot. speed [rpm]\n') % data.shape[0])
@@ -860,9 +860,8 @@ class HAWC2SInputWriter(HAWC2InputWriter):
         opt.append('  prvs_turbine %d' % dll_init.prvs_turbine)
         opt.append('  include_torsiondeform %d' %
                    self.vartrees.h2s.options.include_torsiondeform)
-        if self.vartrees.h2s.options.remove_torque_limits:
-            opt.append('  remove_torque_limits %d' %
-                       self.vartrees.h2s.options.remove_torque_limits)
+        opt.append('  set_torque_limit %d' %
+                   self.vartrees.h2s.options.set_torque_limit)
         opt.append('end operational_data')
 
         opt = ['  ' + o + ';' for o in opt]

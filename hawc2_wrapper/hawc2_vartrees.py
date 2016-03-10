@@ -731,7 +731,7 @@ class HAWC2SCommandsOpt(object):
         self.aero_deflect_ratio = 0.01
         self.vloc_out = False
         self.regions = zeros([1])
-        self.remove_torque_limits = 0
+        self.set_torque_limit = 0
 
 
 class HAWC2SBody(object):
