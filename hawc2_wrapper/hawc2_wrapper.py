@@ -22,7 +22,7 @@ class HAWC2Wrapper(object):
     It only executes the codes and checks the log files. It does not read any
     result file.
 
-    parameters
+    Parameters
     ----------
     hawc2bin: str
         Name of the executable to run. The executable can be an HAWC2,
@@ -43,7 +43,7 @@ class HAWC2Wrapper(object):
         Name of folder where to copy the results and model
     dry_run: bool
         Flag to skip the execution.
-    returns
+    Returns
     -------
     """
 

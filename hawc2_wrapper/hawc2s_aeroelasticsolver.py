@@ -70,6 +70,10 @@ class HAWC2SWorkflow(Component):
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
+        self.writer.vartrees.aero.ae_filename = \
+            os.path.join(self.data_directory, self.case_id+'_ae.dat')
+        self.writer.vartrees.aero.pc_filename = \
+            os.path.join(self.data_directory, self.case_id+'_pc.dat')
         self.writer.vartrees.aero.aerosections = config['aerodynamic_sections']
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)

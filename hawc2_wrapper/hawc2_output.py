@@ -21,12 +21,10 @@ class HAWC2Output(object):
     case_tags: dict
         Dictionary with tags as keys. Keys required [run_dir], [res_dir], and
         [case_id].
-    m: list
-        Values of the slope of the SN curve.
-    no_bins: int
-        Number of bins for the binning of the amplitudes.
-    neq: int
-        Number of equivalent cycles
+    config: dict                
+        * m: list. Values of the slope of the SN curve.
+        * no_bins: int. Number of bins for the binning of the amplitudes.
+        * neq: int. Number of equivalent cycles
 
 
     Returns
@@ -39,12 +37,16 @@ class HAWC2Output(object):
         load for each value of m.
 
     """
-    def __init__(self):
+    def __init__(self, config):
 
         self.eq = []
         self.stats = []
 
-    def execute(self, case_tags, m=[3, 4, 6, 8, 10, 12], no_bins=128, neq=600):
+        self.no_bins = config['no_bins'] if 'no_bins' in config.keys() else 128
+        self.neq = config['neq'] if 'neq' in config.keys() else 600
+        self.m = config['m'] if 'm' in config.keys() else [3, 4, 6, 8, 10, 12]
+
+    def execute(self, case_tags):
 
         print 'reading outputs for case %s ...' % case_tags['[case_id]']
 
@@ -53,8 +55,9 @@ class HAWC2Output(object):
         self.stats = case.res.calc_stats(case.sig)
         self.eq = []
         for s in case.sig.T:
-            self.eq.append(case.res.calc_fatigue(s, no_bins=no_bins, neq=neq,
-                                                 m=m))
+            self.eq.append(case.res.calc_fatigue(s, no_bins=self.no_bins,
+                                                 neq=self.neq,
+                                                 m=self.m))
 
 
 class HAWC2SOutputBase(object):

@@ -237,7 +237,7 @@ class HAWC2InputWriter(object):
                    self.vartrees.sim.solvertype)
         sim.append('convergence_limits %9.2e %9.2e %9.2e' %
                    tuple(self.vartrees.sim.convergence_limits))
-        sim.append('on_no_convergence continue')
+        sim.append('on_no_convergence %s'% self.vartrees.sim.on_no_convergence)
         sim.append('max_iterations %i' % self.vartrees.sim.max_iterations)
         sim.append('logfile %s' % self.vartrees.sim.logfile)
         sim.append('begin newmark')
@@ -272,12 +272,15 @@ class HAWC2InputWriter(object):
 
         for wind_ramp in wind_vt.wind_ramp_abs:
             wind.append('wind_ramp_abs' + 4*fmt % tuple(wind_ramp))
-        if self.vartrees.wind.scale_time_start > 0:
+
+        if wind_vt.scale_time_start > 0:
             wind.append('scale_time_start' + fmt % wind_vt.scale_time_start)
-        if self.vartrees.wind.wind_ramp_t1 > 0:
+
+        if wind_vt.wind_ramp_t1 > 0 or wind_vt.wind_ramp_t0 > 0 :
             wind.append('wind_ramp_factor' + 4*fmt %
                         (wind_vt.wind_ramp_t0, wind_vt.wind_ramp_t1,
                          wind_vt.wind_ramp_factor0, wind_vt.wind_ramp_factor1))
+
         if wind_vt.iec_gust:
             wind.append('iec_gust %s' % wind_vt.iec_gust_type + 4*fmt %
                         (wind_vt.G_A, wind_vt.G_phi0, wind_vt.G_t0,
@@ -328,9 +331,9 @@ class HAWC2InputWriter(object):
         """ write tower shadow with potential method"""
 
         fmt = ' %12.6e'
+        tower_pot = []
         if hasattr(self.vartrees.wind, 'tower_potential'):
             tp = self.vartrees.wind.tower_potential
-            tower_pot = []
             tower_pot.append('begin tower_shadow_potential_2')
             tower_pot.append('tower_mbdy_link %s' % tp.tower_mbdy_link)
             tower_pot.append('nsec %d' % tp.nsec)
@@ -349,13 +352,11 @@ class HAWC2InputWriter(object):
         aero = []
         aero.append('begin aero')
         aero.append('nblades  %d' % aerovt.nblades)
-        aero.append('hub_vec %s -3' % 'shaft')
-        for link in self.vartrees.aero.links:
+        aero.append('hub_vec shaft %i' % aerovt.hub_vec_coo)
+        for link in aerovt.links:
             aero.append('link %i mbdy_c2_def %s' % (link[0], link[2]))
-        aero.append('ae_filename ./%s/%s_ae.dat' % (self.data_directory,
-                                                    self.case_id))
-        aero.append('pc_filename ./%s/%s_pc.dat' % (self.data_directory,
-                                                    self.case_id))
+        aero.append('ae_filename %s' % aerovt.ae_filename)
+        aero.append('pc_filename %s' % aerovt.pc_filename)
         aero.append('induction_method %i' % aerovt.induction_method)
         aero.append('aerocalc_method  %i' % aerovt.aerocalc_method)
         if aerovt.aero_distribution_file != '':
@@ -387,8 +388,8 @@ class HAWC2InputWriter(object):
                 aerodrag.append('  mbdy_name %s' % e.mbdy_name)
                 aerodrag.append('  aerodrag_sections %s %i' % (
                                      e.dist, e.calculation_points))
-                aerodrag.append('  nsec %d' % e.nsec)
-                for j in range(e.nsec):
+                aerodrag.append('  nsec %d' % len(e.sections))
+                for j in range(len(e.sections)):
                     aerodrag.append('  sec' + 3*fmt % tuple(e.sections[j][:]))
                 aerodrag.append('end aerodrag_element')
             aerodrag.append('end aerodrag')

@@ -122,20 +122,15 @@ class HAWC2InputReader(object):
 
         blade_ae = read_hawc2_ae_file(self.vartrees.aero.ae_filename)
 
-        self.vartrees.blade_ae.s = blade_ae['s']
-        self.vartrees.blade_ae.chord = blade_ae['chord']
-        self.vartrees.blade_ae.rthick = blade_ae['rthick']
-        self.vartrees.blade_ae.aeset = blade_ae['aeset']
+        for var in ['s', 'chord', 'rthick', 'aeset']:
+            setattr(self.vartrees.blade_ae, var, blade_ae[var])
 
     def _add_simulation(self, section):
 
         vt = HAWC2Simulation()
-        vt = self.set_entry(vt, section, 'time_stop')
-        vt = self.set_entry(vt, section, 'solver_type')
-        vt = self.set_entry(vt, section, 'convergence_limits')
-        vt = self.set_entry(vt, section, 'on_no_convergence')
-        vt = self.set_entry(vt, section, 'max_iterations')
-        vt = self.set_entry(vt, section, 'logfile')
+        for var in vt.var:
+            vt = self.set_entry(vt, section, var)
+
         newmark = section.get_entry('newmark')
         vt.newmark_deltat = newmark.get_entry('deltat')
         vt = self.set_entry(vt, section, 'eig_out')
@@ -182,7 +177,7 @@ class HAWC2InputReader(object):
             vt.iec_gust_type = gust[0]
             vt.G_A = gust[1]
             vt.G_phi0 = gust[2]
-            vt.t0 = gust[3]
+            vt.G_t0 = gust[3]
             vt.G_T = gust[4]
         if vt.turb_format == 1:
             mann = section.get_entry('mann')
@@ -220,20 +215,14 @@ class HAWC2InputReader(object):
     def _add_aero(self, section):
 
         vt = HAWC2Aero()
-        vt = self.set_entry(vt, section, 'nblades')
-        vt = self.set_entry(vt, section, 'induction_method')
-        vt = self.set_entry(vt, section, 'aerocalc_method')
-        vt = self.set_entry(vt, section, 'tiploss_method')
-        vt = self.set_entry(vt, section, 'dynstall_method')
-        vt = self.set_entry(vt, section, 'aerosections')
+        for var in vt.var:
+            vt = self.set_entry(vt, section, var)
+
         aero_dist = section.get_entry('aero_distribution')
         if aero_dist is not None:
             vt.aero_distribution_file = aero_dist[0]
             vt.aero_distribution_set = int(aero_dist[1])
 
-        vt = self.set_entry(vt, section, 'ae_filename')
-        vt = self.set_entry(vt, section, 'pc_filename')
-        vt = self.set_entry(vt, section, 'ae_sets')
         hub_vec = section.get_entry('hub_vec')
         if hub_vec is not None:
             vt.hub_vec_mbdy_name = hub_vec[0]
@@ -257,7 +246,6 @@ class HAWC2InputReader(object):
             dist = entry.get_entry('aerodrag_sections')
             e.dist = dist[0]
             e.calculation_points = int(dist[1])
-            e = self.set_entry(e, entry, 'nsec')
             e = self.set_entry(e, entry, 'sections', h2name='sec')
             vt.elements.append(e)
 

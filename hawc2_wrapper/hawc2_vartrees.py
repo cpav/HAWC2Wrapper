@@ -358,7 +358,7 @@ class HAWC2Simulation(object):
         self.logfile = 'hawc2_case.log'
         self.var = ['time_stop', 'solvertype', 'convergence_limits',
                     'on_no_convergence', 'max_iterations', 'newmark_deltat',
-                    'eig_out', 'logfile']
+                    'logfile']
 
 class HAWC2Aero(object):
 
@@ -377,9 +377,9 @@ class HAWC2Aero(object):
         self.pc_filename = ''
         self.aero_distribution_file = ''
         self.aero_distribution_set = 1
-        self.var = ['nblades', 'hub_vec_mbdy_name', 'hub_vec_coo', 'links',
-                    'induction_method', 'aerocalc_method', 'aerosections',
-                    'tiploss_method', 'dynstall_method']
+        self.var = ['nblades', 'hub_vec_coo', 'induction_method', 
+                    'aerocalc_method', 'aerosections', 'tiploss_method', 
+                    'dynstall_method', 'ae_filename', 'pc_filename']
 
 class HAWC2Mann(object):
 
@@ -473,10 +473,9 @@ class HAWC2AeroDragElement(object):
     def __init__(self):
         self.mbdy_name = ''
         self.dist = ''
-        self.nsec = 1
         self.sections = []
         self.calculation_points = 2
-
+        self.var = ['mbdy_name', 'dist', 'sections', 'calculation_points']
 
 class HAWC2OutputListVT(object):
 

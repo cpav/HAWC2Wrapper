@@ -1,217 +1,131 @@
 # -*- coding: utf-8 -*-
 import unittest
-import numpy as np
-from openmdao.api import Problem, Group, IndepVarComp
+
 from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
-from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
-from hawc2_wrapper.hawc2_output import HAWC2SOutput
-from hawc2_wrapper.hawc2_aeroelasticsolver import HAWC2SWorkflow, HAWC2SAeroElasticSolver
-import filecmp
+
+import numpy as np
+import unittest
+import copy
+
+def assert_differet_types(self, val, var, vt):
+
+    if type(val) == str:
+        self.assertEqual(val, getattr(vt, var))
+    if type(val) == np.ndarray:
+        for i in range(len(val)):
+            self.assertEqual(val[i], getattr(vt, var)[i])
+    else:
+        self.assertAlmostEqual(val, getattr(vt, var), places=14)
 
 
-class TestIO():
+def read_htc(filename):
 
-    def run(self):
-        a = HAWC2InputReader()
-        a.htc_master_file = 'main_hs2.htc'
-        a.execute()
-        self.vartrees = a.vartrees
-        b = HAWC2SInputWriter()
-        b.vartrees = a.vartrees
-        b.case_id = 'h2s'
-        b.execute()
-        print filecmp.cmp('main_hs2.htc', 'h2s.htc')
+    read = HAWC2InputReader()
+    read.htc_master_file = filename
+    read.execute()
 
-        a = HAWC2InputReader()
-        a.htc_master_file = 'main_h2.htc'
-        a.execute()
-
-        b = HAWC2InputWriter()
-        b.vartrees = a.vartrees
-        b.turb_directory = a.vartrees.wind.turb_directory
-        b.case_id = 'h2'
-        b.execute()
-        print filecmp.cmp('main_h2.htc', 'h2.htc')
+    return read
 
 
-class TestRun():
+class Test(unittest.TestCase):
 
-    def run_hs2(self):
+    def _test_IO_Aero(self):
 
-        t2 = HAWC2Wrapper()
-        t2.hawc2bin = 'HAWC2s.exe'
-        t2.case_id = 'h2s'
-        t2.compute()
+        init = read_htc('main_hs2.htc')
 
-    def run_h2(self):
+        writer = HAWC2SInputWriter()
 
-        t2 = HAWC2Wrapper()
-        t2.hawc2bin = 'HAWC2mb.exe'
-        t2.case_id = 'h2'
-        t2.compute()
+        for var in init.vartrees.aero.var:
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            val = round(np.random.rand()*10)
+            if var in ['ae_filename']:
+                val = './data/DTU_10MW_RWT_ae.dat'
+            if var in ['pc_filename']:
+                val = './data/DTU_10MW_RWT_pc.dat'
+            setattr(writer.vartrees.aero, var, val)
+            writer.case_id = 'h2s'
+            writer.execute()
 
+            reader = read_htc('h2s.htc')
 
-class TestROutput():
+            assert_differet_types(self, val, var, reader.vartrees.aero)
 
-    def run(self):
+    def _test_IO_Wind(self):
 
-        a = HAWC2InputReader()
-        a.htc_master_file = 'main_hs2.htc'
-        a.execute()
+        init = read_htc('main_hs2.htc')
 
-        b = HAWC2SInputWriter()
-        b.vartrees = a.vartrees
-        b.case_id = 'h2s'
-        b.vartrees.h2s.options.include_torsiondeform = 0
-        b.vartrees.h2s.commands = ['compute_optimal_pitch_angle',
-                                   'compute_steady_states',
-                                   'save_power',
-                                   'save_induction']
-        b.execute()
+        writer = HAWC2SInputWriter()
 
-        c = HAWC2Wrapper()
-        c.hawc2bin = 'HAWC2s.exe'
-        c.case_id = b.case_id
-        c.compute()
+        for var in init.vartrees.wind.var:
 
-        t3 = HAWC2SOutput()
-        t3.case_id = b.case_id
-        t3.commands = b.vartrees.h2s.commands
-        t3.execute()
-        print 'Pitch angle:'
-        print t3.pitch
-        print 'Radial positions:'
-        print t3.s
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            val = np.ceil(np.random.rand()*10)
 
-class TestHAWC2SWorkflow(object):
-    
-    def run(self):
-        
-        config = {}
-        config['master_file'] = 'main_hs2.htc'
-        config['with_structure'] = 0
-        config['with_geom'] = 0
-        cf = {}
-        config['HAWC2SInputWriter'] = cf
-        cf = {}
-        cf['dry_run'] = False
-        cf['copyback_results'] = False
-        cf['hawc2bin'] = 'hawc2s.exe'
-        config['HAWC2Wrapper'] = cf
-        cf = {}
-        cf['blade'] = ['aoa', 'Ft', 'Fn', 'cl', 'cd']
-        cf['rotor'] = ['wsp', 'pitch', 'P', 'rpm', 'T']
-        config['HAWC2SOutputs'] = cf
-      
-        root = Group()
-        #root.add('indep_var', IndepVarComp('x', 7.0))
-        #case = {'wsp': [5, 6], 'pitch': [8, 54], 'rpm': [0.001, 1]}
-        case = [3, 4 ,5 ,67 ,8]
-        root.add('my_comp', HAWC2SWorkflow(config, 'ws_id', case, 0, 0))
-        #root.connect('indep_var.x', 'my_comp.x_input')
-        root.my_comp.writer.vartrees.h2s.options.include_torsiondeform = 0
-        root.my_comp.writer.vartrees.h2s.options.bladedeform = 'nobladedeform'
-        prob = Problem(root)
-        prob.setup()
-        prob.run()
-        
-        print prob['my_comp.outputs_rotor']
-        print prob['my_comp.outputs_blade']
-        #print prob['my_comp.pitch']
-        #print prob['my_comp.rpm']
+            if var == 'iec_gust':
+                val = True
+            if var == 'iec_gust_type':
+                val = 'abc'
+                setattr(writer.vartrees.wind, 'iec_gust', True)
 
+            setattr(writer.vartrees.wind, var, val)
 
-class TestHAWC2SAeroElasticSolver(object):
-    
-    def run(self):
-        
-        config = {}
-        config['master_file'] = 'main_hs2.htc'
-        config['with_structure'] = 0
-        config['with_geom'] = 0
-        #config['aerodynamic_sections'] = 30
-        cf = {}
-        #config['HAWC2SInputWriter'] = cf
-        cf = {}
-        cf['blade_ni_span'] = 20
-        cf['hub_radius'] = 2.8
-        config['HAWC2GeometryBuilder'] = cf
-        cf = {}
-        cf['dry_run'] = False
-        cf['copyback_results'] = False
-        cf['hawc2bin'] = 'hawc2s.exe'
-        config['HAWC2Wrapper'] = cf
+            if var in ['wind_ramp_factor0', 'wind_ramp_factor1']:
+                setattr(writer.vartrees.wind, 'wind_ramp_t1', val)
+            if var in ['G_A', 'G_phi0', 'G_t0', 'G_T']:
+                setattr(writer.vartrees.wind, 'iec_gust', True)
+            writer.case_id = 'h2s'
+            writer.execute()
 
-        cf = {}
-        cf['wsp'] = [4]
-        cf['user'] = [{'wsp': 70, 'pitch': 80, 'rpm': 0.01}]
-        config['cases'] = cf
+            reader = read_htc('h2s.htc')
 
-        cf = {}
-        cf['blade'] = ['aoa', 'Ft', 'Fn', 'cl', 'cd']
-        cf['rotor'] = ['wsp', 'pitch', 'P', 'rpm', 'T']
-        config['HAWC2SOutputs'] = cf
-        n = 5
-        root = HAWC2SAeroElasticSolver(config, [10, 19], n)
-        prob = Problem(root)
-        
-        if config['with_structure']:
-            prob.root.add('blade_beam_structure', IndepVarComp('blade_beam_structure', np.zeros([10, 19])), promotes=['*'])
+            assert_differet_types(self, val, var, reader.vartrees.wind)
 
-        if config['with_geom']:
-            geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
-                        'chord', 'rthick', 'p_le']
+    def _test_IO_Sim(self):
 
-            for v in geom_var:
-                prob.root.add(v, IndepVarComp(v, np.zeros(n)), promotes=['*'])
+        init = read_htc('main_h2.htc')
 
-            prob.root.add('blade_length', IndepVarComp('blade_length', 0.), promotes=['*'])    
+        writer = HAWC2InputWriter()
 
-        prob.setup()
+        for var in init.vartrees.sim.var:
 
-        if config['with_structure']:
-            mat = np.zeros([10, 19])
-            mat[:, 0] = np.linspace(0, 1, 10)
-            mat[:, 1] = 1.
-            mat[:, 4] = 0.1
-            mat[:, 5] = 0.1
-            mat[:, 8] = 1e9
-            mat[:, 9] = 1e9
-            for i in [10, 11, 12, 13, 14, 15]:
-                mat[:, i] = 0.1
-            prob['blade_beam_structure'] = mat
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            val = np.ceil(np.random.rand()*10)
+            if var == 'convergence_limits':
+                val = np.ceil(np.random.rand(3)*100)/100
+            if var in ['on_no_convergence', 'logfile']:
+                val = 'zaq'
 
-        if config['with_geom']:
-            for v in geom_var[:]:
-                prob[v] = np.zeros(n)
-            prob['z'] = np.array([0., 0.25, 0.5, 0.75, 1.])
-            prob['s'] = np.array([0., 0.25, 0.5, 0.75, 1.])
-            prob['chord'] = np.array([1., 2., 2.5, 0.75, 0.5])/86.
-            prob['rthick'] = np.array([1., .3, .25, 0.25, 0.2])
-            prob['blade_length'] = 86.
-        prob.run()
-        print prob['aggregate.wsp']
-        print prob['aggregate.P']
-        print prob['aggregate.Ft']
-  
+            setattr(writer.vartrees.sim, var, val)
+
+            writer.case_id = 'h2s'
+            writer.execute()
+
+            reader = read_htc('h2s.htc')
+
+            assert_differet_types(self, val, var, reader.vartrees.sim)
+
+    def test_IO_Aerodrag(self):
+
+        init = read_htc('main_h2.htc')
+
+        writer = HAWC2InputWriter()
+
+        for var in init.vartrees.aerodrag.elements[0].var:
+            print var
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            val = np.ceil(np.random.rand()*10)
+            
+            if var == 'sections':
+                val = [[0,0, 8],[0,1, 5]]
+            setattr(writer.vartrees.aerodrag.elements[0], var, val)
+
+            writer.case_id = 'h2s'
+            writer.execute()
+
+            reader = read_htc('h2s.htc')
+            assert_differet_types(self, val, var, reader.vartrees.aerodrag.elements[0])
+
 if __name__ == '__main__':
 
-    print 'Test 1'
-    t1 = TestIO()
-    #t1.run()
-
-    t2 = TestRun()
-    # t2.run_hs2()
-
-    print 'Test 3'
-    t3 = TestROutput()
-    #t3.run()
-    
-    print 'Test 4'
-    t4 = TestHAWC2SWorkflow()
-    #t4.run()
-    
-    print 'Test 5'
-    t5 = TestHAWC2SAeroElasticSolver()
-    t5.run()
+    unittest.main()
