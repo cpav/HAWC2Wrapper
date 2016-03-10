@@ -5,17 +5,21 @@ from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
 
 import numpy as np
-import unittest
 import copy
+
 
 def assert_differet_types(self, val, var, vt):
 
     if type(val) == str:
         self.assertEqual(val, getattr(vt, var))
-    if type(val) == np.ndarray:
+    elif type(val) == np.ndarray:
         for i in range(len(val)):
             self.assertAlmostEqual(val[i], getattr(vt, var)[i], places=14)
+    elif type(val) == list:
+        if type(val[0]) == list        
+        
     else:
+        
         self.assertAlmostEqual(val, getattr(vt, var), places=14)
 
 
@@ -114,7 +118,7 @@ class Test(unittest.TestCase):
         for var in init.vartrees.aerodrag.elements[0].var:
             writer.vartrees = copy.deepcopy(init.vartrees)
             val = np.ceil(np.random.rand()*10)
-            
+
             if var == 'sections':
                 val = [[0,0, 8],[0,1, 5]]
             setattr(writer.vartrees.aerodrag.elements[0], var, val)
@@ -125,7 +129,7 @@ class Test(unittest.TestCase):
             reader = read_htc('h2s.htc')
             assert_differet_types(self, val, var, reader.vartrees.aerodrag.elements[0])
 
-    def _test_IO_Bodies(self):
+    def test_IO_Bodies(self):
 
         init = read_htc('main_h2.htc')
 
@@ -134,13 +138,21 @@ class Test(unittest.TestCase):
         for var in init.vartrees.main_bodies.blade1.var:
             print var
             writer.vartrees = copy.deepcopy(init.vartrees)
-            
+
             val = np.ceil(np.random.rand()*10)
-            if var in ['body_name', 'body_type']:
+            if var in ['body_name', 'body_type', 'node_distribution']:
                 val = 'blade1'
             if var == 'st_input_type':
                 val = 0
-                
+            if var == 'body_set':
+                val = [1, 2]
+            if var == 'damping_aniso':
+                val = np.ceil(np.random.rand(6)*10)
+                writer.vartrees.main_bodies.blade1.damping_type = 'ani'
+            if var == 'damping_posdef':
+                val = np.ceil(np.random.rand(6)*10)
+            if var == 'concentrated_mass':
+                val = [np.ceil(np.random.rand(8)*10)]
             setattr(writer.vartrees.main_bodies.blade1, var, val)
 
             writer.case_id = 'h2s'
@@ -149,50 +161,51 @@ class Test(unittest.TestCase):
             reader = read_htc('h2s.htc')
             assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1)
 
-    def test_IO_BeamStructure(self):
+    def _test_IO_BeamStructure(self):
 
         init = read_htc('main_h2.htc')
 
         writer = HAWC2InputWriter()
         writer.vartrees = copy.deepcopy(init.vartrees)
-        
+
         for iset in range(2):
             for var in writer.vartrees.main_bodies.blade1.beam_structure[iset].var:
                 n = len(writer.vartrees.main_bodies.blade1.beam_structure[iset].s)
                 writer.vartrees = copy.deepcopy(init.vartrees)
 
                 val = np.random.rand(n)
-    
+
                 setattr(writer.vartrees.main_bodies.blade1.beam_structure[iset], var, val)
-    
+
                 writer.case_id = 'h2s'
                 writer.execute()
-    
+
                 reader = read_htc('h2s.htc')
                 assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1.beam_structure[iset])
 
-    def test_IO_BeamStructure_FPM(self):
+    def _test_IO_BeamStructure_FPM(self):
 
         init = read_htc('main_h2_FPM.htc')
 
         writer = HAWC2InputWriter()
         writer.vartrees = copy.deepcopy(init.vartrees)
-        
+
         for iset in range(2):
             for var in writer.vartrees.main_bodies.blade1.beam_structure[iset].var:
                 n = len(writer.vartrees.main_bodies.blade1.beam_structure[iset].s)
                 writer.vartrees = copy.deepcopy(init.vartrees)
 
                 val = np.random.rand(n)
-    
+
                 setattr(writer.vartrees.main_bodies.blade1.beam_structure[iset], var, val)
-    
+
                 writer.case_id = 'h2s'
                 writer.execute()
-    
+
                 reader = read_htc('h2s.htc')
                 assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1.beam_structure[iset])
-                
+
+
 if __name__ == '__main__':
 
     unittest.main()

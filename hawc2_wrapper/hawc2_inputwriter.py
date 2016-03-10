@@ -56,7 +56,7 @@ def write_stfile(body, case_id):
 
     """write the beam structural data to an st_filename"""
     exp_prec = 15             # exponential precesion
-    col_width = exp_prec + 8  # column width required for exp precision
+    col_width = exp_prec + 9  # column width required for exp precision
     if body.st_input_type is 0:
         header = ['r', 'm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'x_sh', 'y_sh',
                   'E', 'G', 'I_x', 'I_y', 'K', 'k_x', 'k_y', 'A', 'pitch',
@@ -399,7 +399,7 @@ class HAWC2InputWriter(object):
                 main_body.append('nbodies     %d' % body.nbodies)
             else:
                 main_body.append('nbodies     %d' % (body.c12axis.shape[0]-1))
-            main_body.append('node_distribution     c2_def')
+            main_body.append('node_distribution %s'% body.node_distribution)
 
             if body.damping_type is 'ani':
                 main_body.append('damping_aniso' + 6*fmt %

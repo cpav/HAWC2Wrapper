@@ -231,7 +231,7 @@ class HAWC2MainBody(object):
         self.constraints = []
         self.var = ['body_name', 'body_type', 'st_input_type',
                     'body_set', 'nbodies', 'node_distribution', 
-                    'damping_type', 'concentrated_mass', 'orientations', 'constraints']
+                    'damping_posdef', 'damping_aniso','concentrated_mass', 'orientations', 'constraints']
 
     def add_orientation(self, orientation):
         if orientation == 'base':
@@ -361,12 +361,12 @@ class HAWC2MainBodyList(object):
 class HAWC2Simulation(object):
 
     def __init__(self):
-        self.time_stop = 300.  # Simulation stop time
-        self.solvertype = 1    # Solver type. Default Newmark
-        self.convergence_limits = [1.0e3, 1.0, 0.7]  # Sovler convergence limits
+        self.time_stop = 300.  
+        self.solvertype = 1
+        self.convergence_limits = [1.0e3, 1.0, 0.7]
         self.on_no_convergence = ''
-        self.max_iterations = 100   # Maximum iterations
-        self.newmark_deltat = 0.02  # Newmark time step
+        self.max_iterations = 100
+        self.newmark_deltat = 0.02
         self.eig_out = False
         self.logfile = 'hawc2_case.log'
         self.var = ['time_stop', 'solvertype', 'convergence_limits',
