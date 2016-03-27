@@ -52,7 +52,7 @@ class HAWC2SWorkflow(Component):
     -------
     
     """
-    def __init__(self, config, case_id, case, cssize, pfsize):
+    def __init__(self, config, case_id, case):
         super(HAWC2SWorkflow, self).__init__()
 
         self.basedir = os.getcwd()
@@ -76,7 +76,8 @@ class HAWC2SWorkflow(Component):
 
         self.wrapper = HAWC2Wrapper(**config['HAWC2Wrapper'])
         self.wrapper.case_id = case_id
-        naes = config['aerodynamic_sections']-2
+        naes = config['aerodynamic_sections'] - 2
+        nsts = config['structural_sections']
 
         self.output = HAWC2SOutputCompact(config['HAWC2SOutputs'])
         self.output.case_id = case_id
@@ -86,21 +87,26 @@ class HAWC2SWorkflow(Component):
         self.add_output('outputs_rotor', shape=[nws, n])
         n = len(config['HAWC2SOutputs']['blade'])
         self.add_output('outputs_blade', shape=[nws, n*naes])
+        self.add_output('outputs_blade_fext', shape=[nws, 6*nsts])
 
         if self.with_tsr:
             self.add_param('tsr', 0.)
 
         if self.with_structure:
+            if config['hawc2_FPM']:
+                cssize = (config['structural_sections'], 30)
+            else:
+                cssize = (config['structural_sections'], 19)
             self.add_param('blade_beam_structure', shape=cssize)
 
-        self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
+        self.geom = HAWC2GeometryBuilder(blade_ni_span=config['structural_sections'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
         self.geom.c12axis_init[:, :3] /= self.geom.c12axis_init[-1, 2]
         if self.with_geom:
             self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                              'chord', 'rthick', 'p_le']
             for v in self.geom_var:
-                self.add_param(v, shape=[pfsize])
+                self.add_param(v, shape=(config['aerodynamic_sections']))
             self.add_param('blade_length', 0.)
             self.geom.interp_from_htc = False
         else:
@@ -161,7 +167,10 @@ class HAWC2SWorkflow(Component):
             unknowns['outputs_blade'] = self.output.outputs_blade
         except:
             pass
-
+        try:
+            unknowns['outputs_blade_fext'] = self.output.outputs_blade_fext
+        except:
+            pass
         os.chdir(self.basedir)
         # if not self.keep_work_dirs:
         #     shutil.rmtree(workdir)
@@ -291,6 +300,7 @@ class OutputsAggregator(Component):
 
         self.n_cases = n_cases
         self.naes = config['aerodynamic_sections']-2
+        self.nsts = config['structural_sections']
 
         # Add parameters coming from ParallelGroup
         n = len(config['HAWC2SOutputs']['rotor'])
@@ -301,6 +311,9 @@ class OutputsAggregator(Component):
         for i in range(n_cases):
             p_name = 'outputs_blade_%d' % i
             self.add_param(p_name, shape=[1, n*self.naes])
+        for i in range(n_cases):
+            p_name = 'outputs_blade_fext_%d' % i
+            self.add_param(p_name, shape=[1, 6*self.nsts])
 
         # Add outputs
         self.sensor_rotor = []
@@ -312,6 +325,12 @@ class OutputsAggregator(Component):
         for sensor in config['HAWC2SOutputs']['blade']:
             self.sensor_blade.append(sensor)
             self.add_output(sensor, shape=[n_cases, self.naes])
+
+        self.sensor_fext_blade = []
+        if config['with_sectional_forces']:
+            for sensor in ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']:
+                self.sensor_fext_blade.append(sensor)
+                self.add_output(sensor, shape=[n_cases, self.nsts])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -325,6 +344,11 @@ class OutputsAggregator(Component):
                 p_name = 'outputs_blade_%d' % i
                 out = params[p_name]
                 unknowns[sensor][i, :] = out[0, j*self.naes:(j+1)*self.naes]
+        for j, sensor in enumerate(self.sensor_fext_blade):
+            for i in range(self.n_cases):
+                p_name = 'outputs_blade_fext_%d' % i
+                out = params[p_name]
+                unknowns[sensor][i, :] = out[0, j*self.nsts:(j+1)*self.nsts]
 
         fid = open('Rotor_loads.dat', 'w')
         fmt = '#'+'%23s '+(len(self.sensor_rotor)-1)*'%24s '+'\n'
@@ -344,10 +368,17 @@ class HAWC2SAeroElasticSolver(Group):
     -----------
     config: dict
         Configuration dictionary.
-
     """
     def __init__(self, config, cssize=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
+
+        if cssize != None:
+             print 'Warning: cssize should be set in config["structural_sections"]'
+             config['structural_sections'] = cssize
+
+        if pfsize != None:
+             print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
+             config['aerodynamic_sections'] = pfsize
 
         # check that the config is ok
         self._check_config(config)
@@ -379,17 +410,21 @@ class HAWC2SAeroElasticSolver(Group):
         # these should be converted to FUSED-Wind variables
         # but we'll just promote them for now
         promotions = config['HAWC2SOutputs']['blade'] + config['HAWC2SOutputs']['rotor']
+        if config['with_sectional_forces']:
+            promotions += ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']
         self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
         for i, case_id in enumerate(cases_list):
-            pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id],
-                                           cssize, pfsize), promotes=promote)
+            pg.add(case_id, HAWC2SWorkflow(config, case_id, cases[case_id]),
+                                           promotes=promote)
 
             self.connect('pg.%s.outputs_rotor' % case_id,
                          'aggregate.outputs_rotor_%d' % i)
             self.connect('pg.%s.outputs_blade' % case_id,
                          'aggregate.outputs_blade_%d' % i)
+            self.connect('pg.%s.outputs_blade_fext' % case_id,
+                         'aggregate.outputs_blade_fext_%d' % i)
 
     def _check_config(self, config):
 
@@ -397,28 +432,37 @@ class HAWC2SAeroElasticSolver(Group):
             raise RuntimeError('You need to supply the name of the master' +
                                'file in the configuration dictionary.')
 
-        if 'HAWC2GeometryBuilder' not in config.keys():
-            raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2GeometryBuilder.')
-
         if 'HAWC2Wrapper' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
                                'for HAWC2Wrapper.')
 
         if 'aerodynamic_sections' not in config.keys():
-            config['aerodynamic_sections'] = 40
-            print 'The number of aerodynamic section has not been specified' +\
-                  ' in the configuration dictionary. Default value of 40 selected.'
+            raise RuntimeError('You need to supply the aerodynamic_sections' +
+                               ' parameter for HAWC2Wrapper.')
+
+        if 'structural_sections' not in config.keys():
+            raise RuntimeError('You need to supply the structural_sections' +
+                               ' parameter for HAWC2Wrapper.')
 
         if 'with_tsr' not in config.keys():
             config['with_tsr'] = False
-            print 'Tip-speed-ratio is not set as parameters because' +\
-                  ' no option "with_tsr" was given in the configuration.'
+            print 'Tip-speed-ratio is not added as parameter because' +\
+                  ' the option "with_tsr" was not provided in the configuration.'
 
         if 'with_structure' not in config.keys():
             config['with_structure'] = False
             print 'Structural properties are not set as parameters because' +\
                   ' no option "with_structure" was given in the configuration.'
+
+        if 'with_sectional_forces' not in config.keys():
+            config['with_sectional_forces'] = False
+            print 'config parameter "with_sectional_forces" not set' +\
+                  'set to True to output sectional forces (fext files)'
+
+        if 'hawc2_FPM' not in config.keys():
+            config['hawc2_FPM'] = False
+            print 'hawc2_FPM not supplied: structural properties assumed to be ' +\
+                  'in standard HAWC2 format.'
 
         if 'with_geom' not in config.keys():
             config['with_geom'] = False
@@ -437,29 +481,6 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 
-
-#    def configure_freq_placement(self, freq_type='ae'):
-#
-#        self.h2.configure_freq_placement_cid(freq_type=freq_type)
-#        self.connect('h2.freq_factor', 'h2post.freq_factor_cid')
-#        self.create_passthrough('h2post.freq_factor')
-#        self.create_passthrough('h2.mode_freq')
-#        self.create_passthrough('h2.mode_damp')
-#        self.create_passthrough('h2.mode_target_freq')
-#        self.create_passthrough('h2.mode_target_damp')
-#
-#    def configure_controller_tuning(self):
-#
-#        self.controller = self.reader.vartrees.dlls.risoe_controller.dll_init.copy()
-#        for att in self.controller.list_vars():
-#            if att == 'designTSR':
-#                continue
-#            self.connect('controller.'+att,
-#                         'casegen.vartrees.dlls.risoe_controller.dll_init.'+att)
-#            self.connect('controller.'+att,
-#                         'vartrees_out.dlls.risoe_controller.dll_init.'+att)
-#
-#    """
 
 if __name__ == '__main__':
 
