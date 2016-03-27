@@ -90,7 +90,7 @@ class HAWC2GeometryBuilder(object):
         for i in range(b.x.shape[0]):
             xc12 = (.5 - b.p_le[i]) * b.chord[i] * np.cos(b.rot_z[i] * np.pi / 180.)
             yc12 = - (.5 - b.p_le[i]) * b.chord[i] * np.sin(b.rot_z[i] * np.pi / 180.)
-            c12axis[i, 0] = -(b.x[i] + xc12)
+            c12axis[i, 0] = b.x[i] - xc12
             c12axis[i, 1] = b.y[i] + yc12
             c12axis[i, 2] = b.z[i]
         c12axis[:, 3] = b.rot_z
