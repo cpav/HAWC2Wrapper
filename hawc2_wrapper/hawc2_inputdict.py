@@ -92,12 +92,12 @@ class Section(object):
 
 class HAWC2InputDict(object):
     """
-    class for reading a HAWC2 htc file
+    Class for reading a HAWC2 htc file.
 
-    file is read into a nested list with Section objects with lists of
+    The file is read into a nested list with Section objects with lists of
     Entry objects with name, val for each input parameter.
 
-    all values are converted to either integer, float or string
+    All values are converted to either integer, float or string.
 
     pc, ae, and st files are not read.
     """

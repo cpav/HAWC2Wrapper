@@ -1,7 +1,6 @@
 import copy
 import numpy as np
 import os
-import shutil
 
 from openmdao.api import Component, Group, ParallelGroup
 
@@ -19,19 +18,26 @@ class HAWC2SWorkflow(Component):
     ----------
     config: dict
         Configuration dictionary. It has to contain the following entries:
-        |* 'with_structure': bool to add structural properties to the parameters
-        |* 'with_geom': bool to add the blade geometry to the parameters
-        |* 'master_file': str with the name of the master file.
-        |* 'aerodynamic_sections': int of the number of aerodynamic sections.
-        |* 'HAWC2SOutputs': dict of the outputs required. It has to include two
-            dictionaries 'rotor' and 'blade' with the list of rotor sensor and
+
+        * 'with_structure': bool to add structural properties to the parameters
+
+        * 'with_geom': bool to add the blade geometry to the parameters
+
+        * 'master_file': str with the name of the master file.
+
+        * 'aerodynamic_sections': int of the number of aerodynamic sections.
+
+        * 'HAWC2SOutputs': dict of the outputs required. It has to include two\
+            dictionaries 'rotor' and 'blade' with the list of rotor sensor and\
             blade sensors.
 
-        |* 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
+        * 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter\
             parameters.
-        |* 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
-        |* 'HAWC2GeometryBuilder': dict for initialization of
-            HAWC2GeometryBuilder parameters
+
+        * 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
+
+        * 'HAWC2GeometryBuilder': dict for initialization of \
+          HAWC2GeometryBuilder parameters
 
     case_id: str
         Name of the HAWC2s case to create and run. If case_id contains the word
@@ -50,7 +56,7 @@ class HAWC2SWorkflow(Component):
 
     Returns
     -------
-    
+
     """
     def __init__(self, config, case_id, case, cssize, pfsize):
         super(HAWC2SWorkflow, self).__init__()
@@ -279,7 +285,9 @@ class OutputsAggregator(Component):
 
     config: dict
         Configuration dictionary. Requires:
+    
         * 'aerodynamic_sections'. Number of aerodynamic sections.
+
         * 'HAWC2SOutputs'. Dictionary of the outputs.
 
     n_cases: int
