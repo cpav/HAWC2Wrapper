@@ -514,28 +514,31 @@ class HAWC2SOutput(HAWC2SOutputBase):
         self.Fy = np.zeros(nW)
 
         for iw, wsp in enumerate(self.wsp):
-            data = self.blade_loads_data[iw]
-            if len(data.shape) == 1:
-                data = data.reshape(1, data.shape[0])
-            self.s = data[:, 0] / data[-1, 0]
-            self.aoa[iw, :] = data[:, 4] * 180. / np.pi
-            self.Ft[iw, :] = data[:, 6]
-            self.Fn[iw, :] = data[:, 7]
-            self.cl[iw, :] = data[:, 16]
-            self.cd[iw, :] = data[:, 17]
-            self.cm[iw, :] = data[:, 18]
-            self.ct[iw, :] = data[:, 32]
-            self.cp[iw, :] = data[:, 33]
-            self.v_a[iw, :] = data[:, 26]
-            self.v_t[iw, :] = data[:, 27]
-            self.Fx[iw] = np.trapz(data[:, 6], x=data[:, 0])
-            self.Fy[iw] = np.trapz(data[:, 7], x=data[:, 0])
-            main_axis = data[:, 13:16]
-            main_axis[:, 2] *= -1.
-            self.disp_x[iw, :] = main_axis[:, 0]
-            self.disp_y[iw, :] = main_axis[:, 1]
-            self.disp_z[iw, :] = main_axis[:, 2]
-            self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
+            try:
+                data = self.blade_loads_data[iw]
+                if len(data.shape) == 1:
+                    data = data.reshape(1, data.shape[0])
+                self.s = data[:, 0] / data[-1, 0]
+                self.aoa[iw, :] = data[:, 4] * 180. / np.pi
+                self.Ft[iw, :] = data[:, 6]
+                self.Fn[iw, :] = data[:, 7]
+                self.cl[iw, :] = data[:, 16]
+                self.cd[iw, :] = data[:, 17]
+                self.cm[iw, :] = data[:, 18]
+                self.ct[iw, :] = data[:, 32]
+                self.cp[iw, :] = data[:, 33]
+                self.v_a[iw, :] = data[:, 26]
+                self.v_t[iw, :] = data[:, 27]
+                self.Fx[iw] = np.trapz(data[:, 6], x=data[:, 0])
+                self.Fy[iw] = np.trapz(data[:, 7], x=data[:, 0])
+                main_axis = data[:, 13:16]
+                main_axis[:, 2] *= -1.
+                self.disp_x[iw, :] = main_axis[:, 0]
+                self.disp_y[iw, :] = main_axis[:, 1]
+                self.disp_z[iw, :] = main_axis[:, 2]
+                self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
+            except:
+                pass
 
         nfS = self.blade_fext_loads_data[0].shape[0]
 
@@ -553,22 +556,25 @@ class HAWC2SOutput(HAWC2SOutputBase):
         self.Mz_r = np.zeros((nW, nfS))
 
         for iw, wsp in enumerate(self.wsp):
-            data = self.blade_fext_loads_data[iw]
-            if len(data.shape) == 1:
-                data = data.reshape(1, data.shape[0])
-            self.s_e = data[:, 0] / data[-1, 0]
-            self.Fx_e[iw, :] = data[:, 2]
-            self.Fy_e[iw, :] = data[:, 3]
-            self.Fz_e[iw, :] = data[:, 4]
-            self.Mx_e[iw, :] = data[:, 5]
-            self.My_e[iw, :] = data[:, 6]
-            self.Mz_e[iw, :] = data[:, 7]
-            self.Fx_r[iw, :] = data[:, 8]
-            self.Fy_r[iw, :] = data[:, 9]
-            self.Fz_r[iw, :] = data[:, 10]
-            self.Mx_r[iw, :] = data[:, 11]
-            self.My_r[iw, :] = data[:, 12]
-            self.Mz_r[iw, :] = data[:, 13]
+            try:
+                data = self.blade_fext_loads_data[iw]
+                if len(data.shape) == 1:
+                    data = data.reshape(1, data.shape[0])
+                self.s_e = data[:, 0] / data[-1, 0]
+                self.Fx_e[iw, :] = data[:, 2]
+                self.Fy_e[iw, :] = data[:, 3]
+                self.Fz_e[iw, :] = data[:, 4]
+                self.Mx_e[iw, :] = data[:, 5]
+                self.My_e[iw, :] = data[:, 6]
+                self.Mz_e[iw, :] = data[:, 7]
+                self.Fx_r[iw, :] = data[:, 8]
+                self.Fy_r[iw, :] = data[:, 9]
+                self.Fz_r[iw, :] = data[:, 10]
+                self.Mx_r[iw, :] = data[:, 11]
+                self.My_r[iw, :] = data[:, 12]
+                self.Mz_r[iw, :] = data[:, 13]
+            except:
+                pass
 
 
 class HAWC2SOutputCompact(HAWC2SOutput):
