@@ -231,7 +231,7 @@ class HAWC2MainBody(object):
         self.constraints = []
         self.var = ['body_name', 'body_type', 'st_input_type',
                     'body_set', 'nbodies', 'node_distribution', 
-                    'damping_posdef', 'damping_aniso','concentrated_mass', 'orientations', 'constraints']
+                    'damping_posdef', 'damping_aniso','concentrated_mass']
 
     def add_orientation(self, orientation):
         if orientation == 'base':
@@ -580,7 +580,6 @@ class HAWC2Type2DLL(object):
         self.deltat = 0.0            # Time between dll calls.
         self.output = HAWC2Type2DLLIO()   # Outputs for DLL specific
         self.actions = HAWC2Type2DLLIO()  # Actions for DLL specific
-        self.init_dic = {}
 
     def set_init(self, name):
         """
@@ -589,13 +588,6 @@ class HAWC2Type2DLL(object):
         """
         klass = type2_dll_dict[name]
         self.dll_init = klass()
-
-        return self.dll_init
-
-    def set_constants(self, constants):
-        for i, c in enumerate(constants):
-            setattr(self, 'constant%i' % (i + 1), c.val[1])
-            self.init_dic[i+1] = ['constant%i' % (i + 1), 1.]
 
 
 class HAWC2Type2DLLList(object):
@@ -692,7 +684,8 @@ class DTUBasicControllerVT(HAWC2Type2DLLinit):
                          45: ['overspeed_limit', 1.], 50: ['Kp2', 1.],
                          51: ['Ko1', 1.], 52: ['Ko2', 1.]}
 
-    def read_constants(self, constants):
+    def set_constants(self, constants):
+
         for i, c in enumerate(constants):
             if c.val[0] in self.init_dic.keys():
                 var_name = self.init_dic[c.val[0]][0]

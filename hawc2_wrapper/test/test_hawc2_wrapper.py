@@ -16,8 +16,13 @@ def assert_differet_types(self, val, var, vt):
         for i in range(len(val)):
             self.assertAlmostEqual(val[i], getattr(vt, var)[i], places=14)
     elif type(val) == list:
-        if type(val[0]) == list        
-        
+        if type(val[0]) == np.ndarray:
+            for i in range(len(val)):
+                for j in range(len(val[i])):
+                    self.assertAlmostEqual(val[i][j], getattr(vt, var)[i][j], places=14)
+                    
+        else:
+            self.assertAlmostEqual(val, getattr(vt, var), places=14)
     else:
         
         self.assertAlmostEqual(val, getattr(vt, var), places=14)
@@ -129,7 +134,7 @@ class Test(unittest.TestCase):
             reader = read_htc('h2s.htc')
             assert_differet_types(self, val, var, reader.vartrees.aerodrag.elements[0])
 
-    def test_IO_Bodies(self):
+    def _test_IO_Bodies(self):
 
         init = read_htc('main_h2.htc')
 
@@ -205,6 +210,27 @@ class Test(unittest.TestCase):
                 reader = read_htc('h2s.htc')
                 assert_differet_types(self, val, var, reader.vartrees.main_bodies.blade1.beam_structure[iset])
 
+    def test_IO_Controller(self):
+
+        init = read_htc('main_h2.htc')
+
+        writer = HAWC2InputWriter()
+        for var in init.vartrees.dlls.risoe_controller.dll_init.init_dic.keys():
+            tag = init.vartrees.dlls.risoe_controller.dll_init.init_dic[var][0]
+            
+            writer.vartrees = copy.deepcopy(init.vartrees)
+            val = np.ceil(np.random.rand()*10)
+
+            setattr(writer.vartrees.dlls.risoe_controller.dll_init, tag, val)
+
+            writer.case_id = 'h2s'
+            writer.execute()
+
+            reader = read_htc('h2s.htc')
+            
+            print dir(reader.vartrees.dlls.risoe_controller)
+            assert_differet_types(self, val, tag, reader.vartrees.dlls.risoe_controller.dll_init)
+            
 
 if __name__ == '__main__':
 

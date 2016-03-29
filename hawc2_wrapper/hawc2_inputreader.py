@@ -411,6 +411,7 @@ class HAWC2InputReader(object):
         for sec in section.entries:
             if sec.name == 'type2_dll':
                 dll = self._add_type2_dll(sec)
+                print dll.name
                 self.vartrees.dlls.add_dll(dll.name, dll)
                 self.vartrees.dlls_order.append(dll.name)
             elif sec.name == 'hawc_dll':
@@ -427,10 +428,10 @@ class HAWC2InputReader(object):
         dll = self.set_entry(dll, sec, 'arraysizes_init', required=True)
         dll = self.set_entry(dll, sec, 'arraysizes_update', required=True)
         dll = self.set_entry(dll, sec, 'deltat')
-
-        init = dll.set_init(dll.name)
+        dll.set_init(dll.name)
         constants = sec.get_entry('init').entries
-        init.set_constants(constants)
+
+        dll.dll_init.set_constants(constants)
 
         io = sec.get_entry('output').entries
         dll.output.set_outputs(io)

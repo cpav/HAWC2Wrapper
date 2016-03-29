@@ -385,7 +385,7 @@ class HAWC2InputWriter(object):
     def _write_main_body(self, body_name):
         """ write one main body """
 
-        fmt = ' %12.6e'
+        fmt = ' %24.15e'
         body = self.vartrees.main_bodies.get_main_body(body_name)
         main_body = []
         main_body.append('begin main_body')
@@ -443,7 +443,7 @@ class HAWC2InputWriter(object):
 
         orientations = []
         orientations.append('begin orientation')
-        fmt = ' %12.6e'
+        fmt = ' %24.15e'
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
             for orien in body.orientations:
@@ -480,7 +480,7 @@ class HAWC2InputWriter(object):
     def _write_constraints(self):
 
         constraints = []
-        fmt = ' %12.6e'
+        fmt = ' %24.15e'
         constraints.append('begin constraint')
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
@@ -544,7 +544,7 @@ class HAWC2InputWriter(object):
     def _write_dll(self, dll_name):
         """ write general type2 dll"""
 
-        fmt = '%2i  %12.6e'
+        fmt = '%2i  %24.15e'
         dll = []
         dll_vt = getattr(self.vartrees.dlls, dll_name)
         dll_init = dll_vt. dll_init
