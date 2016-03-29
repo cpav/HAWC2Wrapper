@@ -411,7 +411,6 @@ class HAWC2InputReader(object):
         for sec in section.entries:
             if sec.name == 'type2_dll':
                 dll = self._add_type2_dll(sec)
-                print dll.name
                 self.vartrees.dlls.add_dll(dll.name, dll)
                 self.vartrees.dlls_order.append(dll.name)
             elif sec.name == 'hawc_dll':

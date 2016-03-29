@@ -32,7 +32,7 @@ def write_pcfile(path, pc):
             fid.write('%i %i %f %s\n' %
                       (j + 1, polar.aoa.shape[0], polar.rthick, polar.desc))
             for k in range(polar.aoa.shape[0]):
-                fid.write((4*'%.17e '+'\n') % (polar.aoa[k], polar.cl[k],
+                fid.write((4*'%23.15e '+'\n') % (polar.aoa[k], polar.cl[k],
                                                polar.cd[k], polar.cm[k]))
     fid.close()
 
@@ -48,7 +48,7 @@ def write_aefile(path, b):
                      b.chord,
                      np.minimum(100., b.rthick),
                      b.aeset]).T
-    np.savetxt(fid, data, fmt="%.17e %.17e %.17e %i")
+    np.savetxt(fid, data, fmt="%23.15e %23.15e %23.15e %i")
     fid.close()
 
 
@@ -385,7 +385,7 @@ class HAWC2InputWriter(object):
     def _write_main_body(self, body_name):
         """ write one main body """
 
-        fmt = ' %24.15e'
+        fmt = ' %23.15e'
         body = self.vartrees.main_bodies.get_main_body(body_name)
         main_body = []
         main_body.append('begin main_body')
@@ -423,7 +423,7 @@ class HAWC2InputWriter(object):
             main_body.append('begin c2_def')
             main_body.append('  nsec %i' % body.c12axis.shape[0])
             for i in range(body.c12axis.shape[0]):
-                main_body.append('  sec %2i' % (i+1) + 4*' %.17e' %
+                main_body.append('  sec %2i' % (i+1) + 4*' %22.15e' %
                                  tuple(body.c12axis[i, :]))
             main_body.append('end c2_def')
             if len(body.beam_structure) > 0:
@@ -443,7 +443,7 @@ class HAWC2InputWriter(object):
 
         orientations = []
         orientations.append('begin orientation')
-        fmt = ' %24.15e'
+        fmt = ' %22.15e'
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
             for orien in body.orientations:
@@ -480,7 +480,7 @@ class HAWC2InputWriter(object):
     def _write_constraints(self):
 
         constraints = []
-        fmt = ' %24.15e'
+        fmt = ' %22.15e'
         constraints.append('begin constraint')
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
@@ -544,7 +544,7 @@ class HAWC2InputWriter(object):
     def _write_dll(self, dll_name):
         """ write general type2 dll"""
 
-        fmt = '%2i  %24.15e'
+        fmt = '%2i %22.15e'
         dll = []
         dll_vt = getattr(self.vartrees.dlls, dll_name)
         dll_init = dll_vt. dll_init

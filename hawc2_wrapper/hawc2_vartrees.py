@@ -562,7 +562,6 @@ class HAWC2Type2DLLIO(object):
         """
         io_list = []
         for i, c in enumerate(io):
-            print c
             io_list.append(len(c)*' %s' % tuple(c))
         return io_list
 
