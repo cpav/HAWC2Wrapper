@@ -74,12 +74,13 @@ class HAWC2SWorkflow(Component):
         self.reader.execute()
 
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
+        self.writer.data_directory = config['HAWC2InputWriter']['data_directory']
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
         self.writer.vartrees.aero.ae_filename = \
-            os.path.join(self.data_directory, self.case_id+'_ae.dat')
+            os.path.join(self.writer.data_directory, case_id+'_ae.dat')
         self.writer.vartrees.aero.pc_filename = \
-            os.path.join(self.data_directory, self.case_id+'_pc.dat')
+            os.path.join(self.writer.data_directory, case_id+'_pc.dat')
         self.writer.vartrees.aero.aerosections = config['aerodynamic_sections']
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)
@@ -448,8 +449,8 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs'] = {}
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
-
-
+        if 'data_directory' not in config['HAWC2InputWriter'].keys():
+            config['HAWC2InputWriter']['data_directory'] = 'data'
 #    def configure_freq_placement(self, freq_type='ae'):
 #
 #        self.h2.configure_freq_placement_cid(freq_type=freq_type)

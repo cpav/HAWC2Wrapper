@@ -21,7 +21,7 @@ class HAWC2Output(object):
     case_tags: dict
         Dictionary with tags as keys. Keys required [run_dir], [res_dir], and
         [case_id].
-    config: dict                
+    config: dict
         * m: list. Values of the slope of the SN curve.
         * no_bins: int. Number of bins for the binning of the amplitudes.
         * neq: int. Number of equivalent cycles
@@ -42,22 +42,66 @@ class HAWC2Output(object):
         self.eq = []
         self.stats = []
 
-        self.no_bins = config['no_bins'] if 'no_bins' in config.keys() else 128
-        self.neq = config['neq'] if 'neq' in config.keys() else 600
-        self.m = config['m'] if 'm' in config.keys() else [3, 4, 6, 8, 10, 12]
+        self.no_bins = config['no_bins']
+        self.neq = config['neq']
+        self.m = config['m']
 
     def execute(self, case_tags):
 
         print 'reading outputs for case %s ...' % case_tags['[case_id]']
-
+        case_tags['[run_dir]'] = ''
         case = Simulations.Cases(case_tags)
         case.load_result_file(case_tags)
-        self.stats = case.res.calc_stats(case.sig)
+        self.ch_dict = case.res.ch_dict
+        self.stats = case.res.calc_stats(case.sig, i0=0, i1=None)
         self.eq = []
         for s in case.sig.T:
             self.eq.append(case.res.calc_fatigue(s, no_bins=self.no_bins,
                                                  neq=self.neq,
                                                  m=self.m))
+
+
+class HAWC2OutputCompact(HAWC2Output):
+    """
+    HAWC2SOutput: HAWC2Output class that organize results in
+    compact arrays to minimize the number of outputs. The outputs are selected
+    with a dictionary passed in the initialization.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    outputs_statistics: array
+        Statistics outputs.
+
+    outputs_fatigue: array
+        Fatigue outputs.
+    """
+    def __init__(self, config):
+        super(HAWC2OutputCompact, self).__init__(config)
+
+        self.channel = config['channels']
+
+        if 'stat_list' in config.keys():
+            self.stat_list = config['stat_list']
+        else:
+            self.stat_list = ['std', 'rms', 'min', 'int', 'max', 'range',
+                              'absmax', 'mean']
+        self.Nch = len(self.channel)
+        self.Nstat = len(self.stat_list)
+
+    def execute(self, case_tags):
+        super(HAWC2OutputCompact, self).execute(case_tags)
+
+        self.outputs_statistics = np.zeros([self.Nstat, self.Nch])
+        self.outputs_fatigue = np.zeros([len(self.m), self.Nch])
+        
+        for ich, ch in enumerate(self.channel):
+            self.outputs_statistics[:, ich] = \
+                np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
+            self.outputs_fatigue[:, ich] = \
+                np.array([self.eq[self.ch_dict[ch]['chi'], :] for s in self.stat_list])
 
 
 class HAWC2SOutputBase(object):
@@ -211,8 +255,6 @@ class HAWC2SOutputBase(object):
                         self.blade_loads_data.append(data)
                 else:
                     self.blade_loads_data.append(np.zeros((30, 34)))
-            else:
-                print 'Command "%s" not known.' % name
 
 
 class HAWC2SOutput(HAWC2SOutputBase):

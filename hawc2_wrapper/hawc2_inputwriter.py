@@ -136,9 +136,6 @@ class HAWC2InputWriter(object):
             except:
                 pass
 
-        # if not os.path.exists(self.data_directory):
-        #     os.mkdir(self.data_directory)
-
     def execute(self):
 
         if not os.path.exists(self.data_directory):

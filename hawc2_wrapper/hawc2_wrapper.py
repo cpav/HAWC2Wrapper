@@ -90,7 +90,6 @@ class HAWC2Wrapper(object):
         exec_str.append(self.case_id+'.htc')
 
         if not self.dry_run:
-            print exec_str
             try:
                 if _with_timeout:
                     proc = subprocess.check_output(exec_str, timeout=self.timeout)
