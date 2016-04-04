@@ -101,7 +101,7 @@ class HAWC2OutputCompact(HAWC2Output):
             self.outputs_statistics[:, ich] = \
                 np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
             self.outputs_fatigue[:, ich] = \
-                np.array([self.eq[self.ch_dict[ch]['chi'], :] for s in self.stat_list])
+                np.array(self.eq[self.ch_dict[ch]['chi']])
 
 
 class HAWC2SOutputBase(object):
