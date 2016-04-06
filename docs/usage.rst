@@ -149,7 +149,20 @@ An example is::
 
 Postprocessor
 -------------
+The module ``hawc2_output`` is the responsible for reading the output files and perform postprocessing of the data. The module depends on the Wind Energy Toolbox (wetb_) that is used for reading the HAWC2 results files, calculating statistics, fatigue, and load envelopes.
 
+The module containts several classes to perform different types of postprocessing or select and return only specific channels and or results.
+
+The classes are:
+
+    * HAWC2OutputBase: reads HAWC2 output files and computes statistics, fatigue and envelope;
+    * HAWC2Output(HAWC2OutputBase()): reorganizes the results read by HAWC2OutputBase into arrays;
+    * HAWC2SOutputBase: reads HAWC2s output files;
+    * HAWC2SOutput(HAWC2SOutputBase()): reorganizes the results in arrays;
+    * HAWC2SOutputCompact(HAWC2SOutput): reorganizes the results in two compacts arrays;
+    * FreqDampTarget: computes a cost funciton for freqeuncy and damping placement;
+
+.. _wetb: https://gitlab.windenergy.dtu.dk/toolbox/WindEnergyToolbox/
 
 Workflow
 --------

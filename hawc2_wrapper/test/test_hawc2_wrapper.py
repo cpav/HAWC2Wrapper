@@ -4,7 +4,7 @@ import unittest
 from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
 from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
-from hawc2_wrapper.hawc2_output import HAWC2Output
+from hawc2_wrapper.hawc2_output import HAWC2OutputBase
 
 from wetb.prepost import dlcdefs
 
@@ -345,7 +345,7 @@ class Test(unittest.TestCase):
             config['neq'] = 90
             config['no_bins'] = 46
             config['m'] = [12]
-            output = HAWC2Output(config)
+            output = HAWC2OutputBase(config)
             output.execute(case)
 
             self.compare_lists(output.stats['max'], max_ref[icase])
@@ -394,7 +394,7 @@ class Test(unittest.TestCase):
                                     'blade%i-blade%i-node-%3.3i-forcevec-z'%(iblade, iblade, i)])
                                 
             config['ch_envelope'] = ch_list
-            output = HAWC2Output(config)
+            output = HAWC2OutputBase(config)
             output.execute(case)
             
             

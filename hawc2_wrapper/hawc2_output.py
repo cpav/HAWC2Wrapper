@@ -10,7 +10,7 @@ from wetb.prepost import Simulations
 from hawc2_vartrees import DTUBasicControllerVT
 
 
-class HAWC2Output(object):
+class HAWC2OutputBase(object):
     """
     Class that reads an HAWC2 output file and computes statistics and damage
     equivalent load of all the channels in the file.
@@ -69,7 +69,7 @@ class HAWC2Output(object):
             self.envelope = {}
 
 
-class HAWC2OutputCompact(HAWC2Output):
+class HAWC2OutputCompact(HAWC2OutputBase):
     """
     HAWC2SOutput: HAWC2Output class that organize results in
     compact arrays to minimize the number of outputs. The outputs are selected
@@ -467,144 +467,6 @@ class HAWC2SOutputCompact(HAWC2SOutput):
             self.outputs_blade[:, i*nS:(i+1)*nS] = getattr(self, sensor)
 
 
-class FreqDampTargetByIndex(object):
-    """
-    Component to compute th cost function for freqeuncies and dampings
-    placement given the indexed of the modes
-
-    Parameters
-    ----------
-    freqdamp: array
-        Two dimensional array containing the freqeuncies and dampings at
-        different operational points.
-
-    mode_index: array
-        Two dimensional array containing the indexed of the freqeuncies and
-        dampings to be placed at different operational points.
-
-    mode_target_freq: array
-        Two dimenstional array containing the target values of the freqeuncies
-        at operational points. Has to be of the same size as mode_index.
-
-    mode_target_damp: array
-        Two dimenstional array containing the target values of the dampings at
-        operational points. Has to be of the same size as mode_index.
-
-    freq_factor: list
-        RMS of the errors
-
-    Example
-    -------
-
-    """
-    def __init__(self):
-        self.freqdamp = np.array([0.])
-        self.mode_index = np.array([0.])
-        self.mode_target_freq = np.array([0.])
-        self.mode_target_damp = np.array([0.])
-
-        self.freq_factor = []
-
-    def execute(self):
-        """
-        Execute the computation of the objective function for frequency and
-        dampings placement.
-        """
-        freq_factor = []
-        Nmodes = (self.freqdamp.shape[1]-1)/2
-        # for loop along the different operational points
-        for freqdamp in self.freqdamp:
-            for mode_index, mode_target_freq, mode_target_damp in \
-                    zip(self.mode_index, self.mode_target_freq,
-                        self.mode_target_damp):
-                if freqdamp[0] == mode_index[0]:
-                    # for loop along the different target modes
-                    for index, target_freq, target_damp in \
-                            zip(mode_index[1:], mode_target_freq[1:],
-                                mode_target_damp[1:]):
-
-                        if target_freq != -1:
-                            freq_factor.append(abs(freqdamp[index] /
-                                                   target_freq - 1))
-                            print 'Freq: ', freqdamp[index],\
-                                  'Target Freq: ', target_freq,\
-                                  'Diff.:', freq_factor[-1]
-                        if target_damp != -1:
-                            freq_factor.append(abs(freqdamp[index+Nmodes] /
-                                                   target_damp - 1))
-                            print 'Damp: ', freqdamp[index+Nmodes],\
-                                  'Target Damp:', target_damp,\
-                                  'Diff.:', freq_factor[-1]
-        self.freq_factor.freq_factor = freq_factor
-
-
-class ModeTrackingByFreqDamp(object):
-    """
-    Component to compute the indexes of modes for given frequencies and
-    dampings
-
-    Parameters
-    ----------
-    freqdamp: array
-        One dimensional array containing the freqeuncies and dampings.
-
-    mode_freq: array
-        One dimenstional array containing the reference values of the mode
-        freqeuncies.
-
-    mode_damp: array
-        One dimenstional array containing the reference values of the mode
-        dampings.The dampings has to be of the same mode indicated by the
-        freqeuncies in mode_freq.
-
-    mode_index: array
-        One dimensional array containing the indexed of the tracked modes.
-
-    Example
-    -------
-
-    """
-    def __init__(self):
-        self.freqdamp = np.array([0.])
-        self.mode_freq = np.array([0.])
-        self.mode_damp = np.array([0.])
-
-        self.mode_index = np.array([0.])
-
-    def execute(self):
-        ws = self.mode_freq[:, 0]
-        Nmodes = (self.freqdamp.shape[1]-1)/2  # remove the wind speed
-        Nop = self.mode_freq.shape[0]
-        Nm = self.mode_freq.shape[1]
-        self.mode_index = np.zeros([Nop, Nm])
-        iop = -1
-        # Loop the operational points
-        for freqdamp in self.freqdamp:
-            # select right wind speed of reference values
-            if freqdamp[0] in ws:
-                iop += 1
-                for w, iw in zip(ws, range(len(ws))):
-                    if w == freqdamp[0]:
-                        break
-                mode_freq = self.mode_freq[iw, 1:]
-                mode_damp = self.mode_damp[iw, 1:]
-
-                allfreq = freqdamp[1:Nmodes+1]
-                alldamp = freqdamp[Nmodes+1:]
-                self.mode_index[iop, 0] = freqdamp[0]
-                # Loop the modes to be tracked
-                for freq, damp, im in zip(mode_freq, mode_damp, range(1, Nm)):
-
-                    err = np.sqrt(((allfreq - freq) / freq)**2 +
-                                  ((alldamp - damp) / damp)**2)
-                    if err[err.argmin()] > 1:
-                        print 'Distance between computed mode freqeuncies ' +\
-                              'and dampings and reference values for ' +\
-                              'tracking is high! %f' % err[err.argmin()]
-
-                    self.mode_index[iop, im] = err.argmin() + 1
-
-
 class FreqDampTarget(object):
     """
     Component to compute th cost function for freqeuncies and dampings
@@ -639,21 +501,77 @@ class FreqDampTarget(object):
         self.mode_damp = np.array([0.])
         self.mode_target_freq = np.array([0.])
         self.mode_target_damp = np.array([0.])
-        self.freq_factor = []
+
+    def mode_tracking_freq_damp(self):
+        """
+        Component to compute the indexes of modes for given frequencies and
+        dampings
+        """
+        ws = self.mode_freq[:, 0]
+        Nmodes = (self.freqdamp.shape[1]-1)/2  # remove the wind speed
+        Nop = self.mode_freq.shape[0]
+        Nm = self.mode_freq.shape[1]
+        self.mode_index = np.zeros([Nop, Nm])
+        iop = -1
+        # Loop the operational points
+        for freqdamp in self.freqdamp:
+            # select right wind speed of reference values
+            if freqdamp[0] in ws:
+                iop += 1
+                for w, iw in zip(ws, range(len(ws))):
+                    if w == freqdamp[0]:
+                        break
+                mode_freq = self.mode_freq[iw, 1:]
+                mode_damp = self.mode_damp[iw, 1:]
+
+                allfreq = freqdamp[1:Nmodes+1]
+                alldamp = freqdamp[Nmodes+1:]
+                self.mode_index[iop, 0] = freqdamp[0]
+                # Loop the modes to be tracked
+                for freq, damp, im in zip(mode_freq, mode_damp, range(1, Nm)):
+
+                    err = np.sqrt(((allfreq - freq) / freq)**2 +
+                                  ((alldamp - damp) / damp)**2)
+                    if err[err.argmin()] > 1:
+                        print 'Distance between computed mode freqeuncies ' +\
+                              'and dampings and reference values for ' +\
+                              'tracking is high! %f' % err[err.argmin()]
+
+                    self.mode_index[iop, im] = err.argmin() + 1
+
+    def freq_damp_target_index(self):
+        """
+        Execute the computation of the objective function for frequency and
+        dampings placement.
+        """
+        freq_factor = []
+        Nmodes = (self.freqdamp.shape[1]-1)/2
+        # for loop along the different operational points
+        for freqdamp in self.freqdamp:
+            for mode_index, mode_target_freq, mode_target_damp in \
+                    zip(self.mode_index, self.mode_target_freq,
+                        self.mode_target_damp):
+                if freqdamp[0] == mode_index[0]:
+                    # for loop along the different target modes
+                    for index, target_freq, target_damp in \
+                            zip(mode_index[1:], mode_target_freq[1:],
+                                mode_target_damp[1:]):
+
+                        if target_freq != -1:
+                            freq_factor.append(abs(freqdamp[index] /
+                                                   target_freq - 1))
+                            print 'Freq: ', freqdamp[index],\
+                                  'Target Freq: ', target_freq,\
+                                  'Diff.:', freq_factor[-1]
+                        if target_damp != -1:
+                            freq_factor.append(abs(freqdamp[index+Nmodes] /
+                                                   target_damp - 1))
+                            print 'Damp: ', freqdamp[index+Nmodes],\
+                                  'Target Damp:', target_damp,\
+                                  'Diff.:', freq_factor[-1]
+        self.freq_factor = np.array(freq_factor)
 
     def execute(self):
 
-        modetrack = ModeTrackingByFreqDamp()
-        modetrack.mode_freq = self.mode_freq
-        modetrack.mode_damp = self.mode_damp
-        modetrack.freqdamp = self.freqdamp
-        modetrack.execute()
-
-        freqtarget = FreqDampTargetByIndex()
-        freqtarget.mode_target_freq = self.mode_target_freq
-        freqtarget.mode_target_damp = self.mode_target_damp
-        freqtarget.freqdamp = self.freqdamp
-        freqtarget.mode_index = modetrack.mode_index
-        freqtarget.execute()
-
-        self.freq_factor = freqtarget.freq_factor
+        self.mode_tracking_freq_damp()
+        self.freq_damp_target_index()
