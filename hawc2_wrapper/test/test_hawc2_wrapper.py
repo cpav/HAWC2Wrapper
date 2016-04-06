@@ -339,7 +339,7 @@ class Test(unittest.TestCase):
             wrapper.hawc2bin = 'HAWC2mb.exe'
             wrapper.log_directory = case['[log_dir]']
             wrapper.case_id = writer.case_id
-            #wrapper.compute()
+            wrapper.compute()
 
             config = {}
             config['neq'] = 90
@@ -376,7 +376,7 @@ class Test(unittest.TestCase):
             wrapper.hawc2bin = 'HAWC2mb.exe'
             wrapper.log_directory = case['[log_dir]']
             wrapper.case_id = writer.case_id
-            #wrapper.compute()
+            wrapper.compute()
 
             config = {}
             config['neq'] = 90
@@ -396,7 +396,6 @@ class Test(unittest.TestCase):
             config['ch_envelope'] = ch_list
             output = HAWC2Output(config)
             output.execute(case)
-            print output.envelope
             
             
 

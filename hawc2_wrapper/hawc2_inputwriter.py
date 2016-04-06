@@ -99,7 +99,7 @@ class HAWC2InputWriter(object):
     """
     Class to write HAWC2 input files.
 
-    parameters
+    Parameters
     ----------
     case_id: str
         Name of the file to write.
@@ -115,9 +115,19 @@ class HAWC2InputWriter(object):
         Name of log files directory.
     control_directory: str
         Name of controller files directory.
-    returns
+
+    Returns
     -------
         nothing
+
+    Example
+    -------
+    
+    >>> from hawc2_inputwriter import HAWC2InputWriter
+    >>> writer = HAWC2InputWriter()
+    >>> writer.case_id = 'new_file'
+    >>> writer.vartrees = reader.vartrees
+    >>> writer.execute()
     """
     def __init__(self, **kwargs):
 
@@ -620,13 +630,23 @@ class HAWC2SInputWriter(HAWC2InputWriter):
     """
     HAWC2InputWriter-type class to write HAWC2s files.
 
-    parameters
+    Parameters
     ----------
         same as for HAWC2InputWriter
 
-    returns
+    Returns
     -------
         nothing
+
+    Example
+    -------
+    
+    >>> from hawc2_inputwriter import HAWC2SInputWriter
+    >>> writer = HAWC2SInputWriter()
+    >>> writer.case_id = 'new_file'
+    >>> writer.vartrees = reader.vartrees
+    >>> writer.execute()
+
     """
     def __init__(self, **kwargs):
         super(HAWC2SInputWriter, self).__init__()

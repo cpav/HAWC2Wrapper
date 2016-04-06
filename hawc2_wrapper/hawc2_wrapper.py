@@ -43,8 +43,19 @@ class HAWC2Wrapper(object):
         Name of folder where to copy the results and model
     dry_run: bool
         Flag to skip the execution.
+
     Returns
     -------
+        The class does not return or create anything.
+
+    Example
+    -------
+    >>> from hawc2_wrapper import HAWC2Wrapper
+    >>> executer = HAWC2Wrapper()
+    >>> executer.hawc2bin = 'HAWC2s.exe'
+    >>> executer.case_id = 'new_file_h2s'
+    >>> executer.execute()
+    
     """
 
     def __init__(self, **kwargs):
@@ -92,7 +103,8 @@ class HAWC2Wrapper(object):
         if not self.dry_run:
             try:
                 if _with_timeout:
-                    proc = subprocess.check_output(exec_str, timeout=self.timeout)
+                    proc = subprocess.check_output(exec_str,
+                                                   timeout=self.timeout)
                 else:
                     proc = subprocess.check_output(exec_str)
                 self.success = True
@@ -100,7 +112,7 @@ class HAWC2Wrapper(object):
                 print proc
             except:
                 self.success = False
-                print self.hawc2bin, ' crashed for case %s'%self.case_id
+                print self.hawc2bin, ' crashed for case %s' % self.case_id
         else:
             print self.hawc2bin + ' dry run...'
             self.success = True
@@ -114,7 +126,8 @@ class HAWC2Wrapper(object):
         if self.copyback_results:
             self.copy_results()
 
-        print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id, time.time() - tt)
+        print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id,
+                                                                time.time()-tt)
 
     def copy_results(self):
         """

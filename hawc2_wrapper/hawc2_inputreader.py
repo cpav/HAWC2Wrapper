@@ -1,9 +1,8 @@
 """"""
-from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file, read_hawc2_pc_file, \
-                              read_hawc2_ae_file
+from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file,\
+                            read_hawc2_pc_file, read_hawc2_ae_file
 from hawc2_vartrees import HAWC2VarTrees, HAWC2Simulation, HAWC2Wind,\
-                           HAWC2Aero,\
-                           HAWC2AirfoilDataset, HAWC2AirfoilPolar,\
+                           HAWC2Aero, HAWC2AirfoilDataset, HAWC2AirfoilPolar,\
                            HAWC2AeroDrag, HAWC2AeroDragElement, HAWC2MainBody,\
                            HAWC2BeamStructure, HAWC2Type2DLL, HAWC2OutputVT,\
                            HAWC2SBody
@@ -15,15 +14,23 @@ class HAWC2InputReader(object):
     """
     Class to read HAWC2 files and store the data in variables trees.
 
-    parameters
+    Parameters
     ----------
     htc_master_file: str
         Name of the htc file to read.
 
-    returns
+    Creates
     -------
     vartrees: HAWC2VarTrees
-        Variable tree with all the information of the model.
+        Attribute corresponding to the variable tree with all the information
+        of the model.
+
+    Example
+    -------
+    >>> from hawc2_inputreader import HAWC2InputReader
+    >>> reader = HAWC2InputReader('hawc2_master.htc')
+    >>> reader.execute()
+
     """
     def __init__(self, htc_master_file='hawc_master.htc'):
         self.htc_master_file = htc_master_file
@@ -292,7 +299,7 @@ class HAWC2InputReader(object):
 
         st = HAWC2BeamStructure(b.st_input_type)
         stdic = read_hawc2_st_file(timo.get_entry('filename'),
-                                        st.var, b.body_set[0])
+                                   st.var, b.body_set[0])
         b.body_set[0] = 1
 
         for stset in stdic:
@@ -492,15 +499,12 @@ class HAWC2InputReader(object):
 
             elif sec.name == 'degrees_of_freedom':
                 self.vartrees.h2s.commands.append(
-                    'degrees_of_freedom' + 5*' %s' % (
-                    sec.val[0], sec.val[1], sec.val[2], sec.val[3], sec.val[4]))
+                    'degrees_of_freedom' + 5*' %s' % tuple(sec.val[:5]))
 
             elif sec.name == 'steady_state_convergence_limits':
                 self.vartrees.h2s.commands.append(
                     'steady_state_convergence_limits' + 9*' %g'
-                    % (sec.val[0], sec.val[1], sec.val[2], sec.val[3],
-                       sec.val[4], sec.val[5], sec.val[6], sec.val[7],
-                       sec.val[8]))
+                    % tuple(sec.val[:9]))
 
             elif sec.name == 'compute_steady_states':
                 self.vartrees.h2s.commands.append('compute_steady_states')
@@ -540,42 +544,28 @@ class HAWC2InputReader(object):
 
             elif sec.name == 'basic_dtu_we_controller':
                 self.vartrees.h2s.commands.append('basic_dtu_we_controller')
-                self.vartrees.dlls.risoe_controller.dll_init.pgTorque =\
-                    sec.val[0]
-                self.vartrees.dlls.risoe_controller.dll_init.igTorque =\
-                    sec.val[1]
-                self.vartrees.dlls.risoe_controller.dll_init.Qg =\
-                    sec.val[2]
-                self.vartrees.dlls.risoe_controller.dll_init.pgPitch =\
-                    sec.val[3]
-                self.vartrees.dlls.risoe_controller.dll_init.igPitch =\
-                    sec.val[4]
-                self.vartrees.dlls.risoe_controller.dll_init.KK1 =\
-                    sec.val[5]
-                self.vartrees.dlls.risoe_controller.dll_init.KK2 =\
-                    sec.val[6]
-                self.vartrees.dlls.risoe_controller.dll_init.generatorFreq =\
-                    sec.val[7]
-                self.vartrees.dlls.risoe_controller.\
-                    dll_init.generatorDamping = sec.val[8]
-                self.vartrees.dlls.risoe_controller.dll_init.ffFreq =\
-                    sec.val[9]
+                dll_init = self.vartrees.dlls.risoe_controller.dll_init
+                dll_init.pgTorque = sec.val[0]
+                dll_init.igTorque = sec.val[1]
+                dll_init.Qg = sec.val[2]
+                dll_init.pgPitch = sec.val[3]
+                dll_init.igPitch = sec.val[4]
+                dll_init.KK1 = sec.val[5]
+                dll_init.KK2 = sec.val[6]
+                dll_init.generatorFreq = sec.val[7]
+                dll_init.generatorDamping = sec.val[8]
+                dll_init.ffFreq = sec.val[9]
 
                 if sec.val[10] == 1:
-                    self.vartrees.dlls.risoe_controller.\
-                        dll_init.generatorSwitch = 1
+                    dll_init.generatorSwitch = 1
 
                 elif sec.val[10] == 0:
-                    self.vartrees.dlls.risoe_controller.\
-                        dll_init.generatorSwitch = 2
+                    dll_init.generatorSwitch = 2
 
                 if len(sec.val) > 11:
-                    self.vartrees.dlls.risoe_controller.dll_init.Kp2 =\
-                        sec.val[11]
-                    self.vartrees.dlls.risoe_controller.dll_init.Ko1 =\
-                        sec.val[12]
-                    self.vartrees.dlls.risoe_controller.dll_init.Ko2 =\
-                        sec.val[13]
+                    dll_init.Kp2 = sec.val[11]
+                    dll_init.Ko1 = sec.val[12]
+                    dll_init.Ko2 = sec.val[13]
 
             elif sec.name == 'compute_controller_input':
                 self.vartrees.h2s.commands.append('compute_controller_input')

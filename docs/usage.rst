@@ -98,22 +98,54 @@ This class calls internally the class ``HAWC2InputDict`` contained in the module
 
 An example of the use of the class is::
     
-    from hawc2_inputreader import HAWC2InputReader
+    >>> from hawc2_inputreader import HAWC2InputReader
     
-    Reader = HAWC2InputReader('hawc2_master.htc')
-    Reader.execute()
+    >>> Reader = HAWC2InputReader('hawc2_master.htc')
+    >>> Reader.execute()
     
 After the execution the object *Reader* contains and attribute *vartrees* that contains the variable tree describing the turbine.
 
-
+The module ``hawc2_inputdict`` includes functions to read *st*, *pc*, and *ae* files.
 
 Writer
 ------
+The module ``hawc2_inputwriter`` contains two classes: ``HAWC2InputWriter`` and ``HAWC2SInputWriter``. The class ``HAWC2SInputWriter`` is of type ``HAWC2InputWriter`` therefore it inherits all the attributes of ``HAWC2InputWriter``.
+The first class is used to write HAWC2 input files, the second HAWC2s files.
 
+During the initialization of the classes the following attributes can be specified:
+    * case_id: for the name of the htc file to be created;
+    * vartrees(HAWC2VarTrees()): to initialize the variable that needs to be converted into an htc file;
+    * data_directory: for the opath of the data directory;
+    * res_directory: for the path of the results directory;
+    * turb_directory: for the path of the turbulence files directory;
+    * log_directory: for the path of the log files directory;
+    * control_directory: for the path of the controller directory.
+
+The class, once executed does not return anything, it only creates a new htc file.
+
+An example of the use of the classes is::
+
+    >>> from hawc2_inputwriter import HAWC2InputWriter, HAWC2SInputWriter
+    >>> writer = HAWC2InputWriter()
+    >>> writer.case_id = 'new_file_h2'
+    >>> writer.vartrees = reader.vartrees
+    >>> writer.execute()
+    >>> writer = HAWC2SInputWriter()
+    >>> writer.case_id = 'new_file_h2s'
+    >>> writer.vartrees = reader_h2s.vartrees
+    >>> writer.execute()
 
 Executer
 --------
+The module ``hawc2_wrapper.py`` is the one that is actually launching the runs of HAWC2 and HAWCStab2. The module includes only the class ``HAWC2Wrapper``.  The class performs some cheks of the log files printing on the screen the errors that are found in the logfile. The class also copies the result directory.
 
+An example is::
+    
+    >>> from hawc2_wrapper import HAWC2Wrapper
+    >>> executer = HAWC2Wrapper()
+    >>> executer.hawc2bin = 'HAWC2s.exe'
+    >>> executer.case_id = 'new_file_h2s'
+    >>> executer.execute()
 
 Postprocessor
 -------------

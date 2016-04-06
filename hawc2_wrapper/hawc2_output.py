@@ -67,8 +67,8 @@ class HAWC2Output(object):
             self.envelope = case.compute_envelope(case.sig, self.ch_envelope)
         else:
             self.envelope = {}
-            
-        
+
+
 class HAWC2OutputCompact(HAWC2Output):
     """
     HAWC2SOutput: HAWC2Output class that organize results in
@@ -104,7 +104,7 @@ class HAWC2OutputCompact(HAWC2Output):
 
         self.outputs_statistics = np.zeros([self.Nstat, self.Nch])
         self.outputs_fatigue = np.zeros([len(self.m), self.Nch])
-        
+
         for ich, ch in enumerate(self.channel):
             self.outputs_statistics[:, ich] = \
                 np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
