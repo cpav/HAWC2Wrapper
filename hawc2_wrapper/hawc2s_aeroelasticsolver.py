@@ -286,7 +286,7 @@ class OutputsAggregator(Component):
 
     config: dict
         Configuration dictionary. Requires:
-    
+
         * 'aerodynamic_sections'. Number of aerodynamic sections.
 
         * 'HAWC2SOutputs'. Dictionary of the outputs.

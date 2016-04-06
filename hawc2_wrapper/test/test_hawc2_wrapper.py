@@ -4,7 +4,7 @@ import unittest
 from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
 from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
-from hawc2_wrapper.hawc2_output import HAWC2OutputBase
+from hawc2_wrapper.hawc2_output import HAWC2OutputBase, HAWC2SOutputBase
 
 from wetb.prepost import dlcdefs
 
@@ -330,7 +330,7 @@ class Test(unittest.TestCase):
             writer.vartrees = reader.vartrees
             writer.vartrees.aero.ae_filename = 'data/'+case['[Case id.]']+'_ae.dat'
             writer.vartrees.aero.pc_filename = 'data/'+case['[Case id.]']+'_pc.dat'
-            writer.case_id = case['[Case id.]']
+            writer.case_id = case['[case_id]']
             writer.vartrees.tags2var(case)
             writer.execute()
 
@@ -365,9 +365,9 @@ class Test(unittest.TestCase):
             case['[run_dir]'] = ''
             writer = HAWC2InputWriter()
             writer.vartrees = reader.vartrees
-            writer.vartrees.aero.ae_filename = 'data/'+case['[Case id.]']+'_ae.dat'
-            writer.vartrees.aero.pc_filename = 'data/'+case['[Case id.]']+'_pc.dat'
-            writer.case_id = case['[Case id.]']
+            writer.vartrees.aero.ae_filename = 'data/'+case['[case_id]']+'_ae.dat'
+            writer.vartrees.aero.pc_filename = 'data/'+case['[case_id]']+'_pc.dat'
+            writer.case_id = case['[case_id]']
             writer.vartrees.tags2var(case)
             writer.execute()
 
@@ -396,10 +396,53 @@ class Test(unittest.TestCase):
             config['ch_envelope'] = ch_list
             output = HAWC2OutputBase(config)
             output.execute(case)
+      
+    def test_hs2_workflow(self):
+          
+        reader = HAWC2InputReader()
+        reader.htc_master_file = 'main_hs2.htc'
+        reader.execute()
+        writer = HAWC2SInputWriter()
+        writer.vartrees = copy.copy(reader.vartrees)
+        writer.case_id = 'h2s'
+        writer.vartrees.dlls.risoe_controller.dll_init.nV = 21
+        writer.execute()
+        wrapper = HAWC2Wrapper()
+        wrapper.hawc2bin = 'HAWC2s.exe'
+        wrapper.case_id = writer.case_id
+        wrapper.compute()
+        output = HAWC2SOutputBase()
+        output.case_id = wrapper.case_id
+        output.commands = writer.vartrees.h2s.commands
+        output.execute()
             
-            
+        opt_ref = [[0.50E+01,  0.1856139007801657E+01,  0.5997000000000000E+01],
+                   [0.60E+01,  0.7679248486373157E+00,  0.5997000000000000E+01],
+                   [0.70E+01,  0.2756222542925286E-02,  0.6388794823610514E+01],
+                   [0.80E+01,  0.2674377573694913E-02,  0.7301487463662347E+01],
+                   [0.90E+01,  0.2674368819285188E-02,  0.8214173397307714E+01],
+                   [0.10E+02,  0.2674368818350105E-02,  0.9126859330341988E+01],
+                   [0.11E+02,  0.2674368818350105E-02,  0.9591314000000001E+01],
+                   [0.12E+02,  0.4128043801574695E+01,  0.9591314000000001E+01],
+                   [0.13E+02,  0.6998870452044216E+01,  0.9591314000000001E+01],
+                   [0.14E+02,  0.9047112663285953E+01,  0.9591314000000001E+01],
+                   [0.15E+02,  0.1075513280195886E+02,  0.9591314000000001E+01],
+                   [0.16E+02,  0.1228078643556466E+02,  0.9591314000000001E+01],
+                   [0.17E+02,  0.1368494154839761E+02,  0.9591314000000001E+01],
+                   [0.18E+02,  0.1499512279716439E+02,  0.9591314000000001E+01],
+                   [0.19E+02,  0.1623682089352936E+02,  0.9591314000000001E+01],
+                   [0.20E+02,  0.1742409870354544E+02,  0.9591314000000001E+01],
+                   [0.21E+02,  0.1856907953949775E+02,  0.9591314000000001E+01],
+                   [0.22E+02,  0.1967436315021541E+02,  0.9591314000000001E+01],
+                   [0.23E+02,  0.2074408302584453E+02,  0.9591314000000001E+01],
+                   [0.24E+02,  0.2178409809683554E+02,  0.9591314000000001E+01],
+                   [0.25E+02,  0.2279885895128390E+02,  0.9591314000000001E+01]]
 
+        for a, b in zip(opt_ref, output.operational_data):
+            self.compare_lists(a, b)
 
 if __name__ == '__main__':
 
     unittest.main()
+    
+    

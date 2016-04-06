@@ -9,6 +9,7 @@ The wrapper is devided in the following main blocks:
 * A **writer** (``hawc2_inputwriter.py``), that writes the data of a turbine into an htc file;
 * An **executer** (``hawc2_wrapper.py``), that executes HAWC2 or HAWC2s for a given htc file;
 * A **postprocessor** (``hawc2_output.py``), that reads result files, performs post processing, and stores them;
+* A **geometry builder** (``hawc2_geometry.py``), performs some geometrical operationis on the blade geometry;
 * An OpenMDAO **workflow** (``hawc2_aeroelasticsolver.py`` and ``hawc2s_aeroelasticsolver.py``), that performs the entire worflow.
 
 The following sections describes each of these blocks.
@@ -155,14 +156,45 @@ The module containts several classes to perform different types of postprocessin
 
 The classes are:
 
-    * HAWC2OutputBase: reads HAWC2 output files and computes statistics, fatigue and envelope;
-    * HAWC2Output(HAWC2OutputBase()): reorganizes the results read by HAWC2OutputBase into arrays;
-    * HAWC2SOutputBase: reads HAWC2s output files;
-    * HAWC2SOutput(HAWC2SOutputBase()): reorganizes the results in arrays;
-    * HAWC2SOutputCompact(HAWC2SOutput): reorganizes the results in two compacts arrays;
-    * FreqDampTarget: computes a cost funciton for freqeuncy and damping placement;
+    * ``HAWC2OutputBase``: reads HAWC2 output files and computes statistics, fatigue and envelope;
+    * ``HAWC2Output(HAWC2OutputBase())``: reorganizes the results read by HAWC2OutputBase into arrays;
+    * ``HAWC2SOutputBase``: reads HAWC2s output files;
+    * ``HAWC2SOutput(HAWC2SOutputBase())``: reorganizes the results in arrays;
+    * ``HAWC2SOutputCompact(HAWC2SOutput())``: reorganizes the results in two compacts arrays;
+    * ``FreqDampTarget``: computes a cost funciton for freqeuncy and damping placement;
 
 .. _wetb: https://gitlab.windenergy.dtu.dk/toolbox/WindEnergyToolbox/
 
+The classes can be used as follow::
+
+    >>> output = HAWC2SOutputBase()
+    >>> output.case_id = wrapper.case_id
+    >>> output.commands = writer.vartrees.h2s.commands
+    >>> output.execute()
+
+    >>> case = {}
+    >>> case['[case_id]'] = 'dlc12_wsp04_wdir000_s1001'
+    >>> case['[res_dir]'] = 'res/dlc12_iec61400-1ed3'
+    >>> config = {}
+    >>> config['neq'] = 600
+    >>> config['no_bins'] = 2**7
+    >>> config['m'] = [12]
+    >>> output = HAWC2OutputBase(config)
+    >>> output.execute(case)
+
+Geometry Builder
+----------------
+This module contains the class ``HAWC2GeometryBuilder`` and depends on the library PGL_.
+The class can be used mainly for two applications:
+    * interpolate the initialized c2def values to change the spanwise discretization;
+    * define the c2def from the variable tree BladeGeometryVT()
+    
+.. _PGL: https://gitlab.windenergy.dtu.dk/frza/PGL 
+
 Workflow
 --------
+The modules ``hawc2_aeroelasticsolver`` and ``hawc2s_aeroelasticsolver`` implement workflows to initialize the variable trees, modify the variable trees according to some inputs, write the htc file, execute HAWC2 or HAWC2s, and perform the postprocessing. The workflows are implemented in the calsses ``HAWC2Workflow`` and ``HAWC2sWorkflow``. These classes are ``Component`` classes. In these classes the variables that need to be changed in the variable trees with respect to the initialization variable tree are added as parameters. Three groups of variables can be added: one for the tip speed ratio, one for the structural properties of the balde, and one for the blade geometry.
+
+The modules contain a ``Group`` class (from OpenMDAO) each, called ``HAWC2AeroElasticSolver`` and ``HAWC2sAeroElasticSolver``. These classes execute the workflow with a ``ParallelGroup``. 
+Each of the module also include a class ``Component`` called ``OutputAggregator`` that groups the outputs from the parallel computation into single arrays.
+

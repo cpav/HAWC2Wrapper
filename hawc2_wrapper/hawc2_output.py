@@ -26,7 +26,6 @@ class HAWC2OutputBase(object):
         * no_bins: int. Number of bins for the binning of the amplitudes.
         * neq: int. Number of equivalent cycles
 
-
     Returns
     -------
     stats: dict
@@ -35,6 +34,18 @@ class HAWC2OutputBase(object):
     eq: list
         List containing a list of each channel containing the damage equivalent
         load for each value of m.
+
+    Example
+    -------
+    >>> case = {}
+    >>> case['[case_id]'] = 'dlc12_wsp04_wdir000_s1001'
+    >>> case['[res_dir]'] = 'res/dlc12_iec61400-1ed3'
+    >>> config = {}
+    >>> config['neq'] = 600
+    >>> config['no_bins'] = 2**7
+    >>> config['m'] = [12]
+    >>> output = HAWC2OutputBase(config)
+    >>> output.execute(case)
 
     """
     def __init__(self, config):
@@ -150,6 +161,14 @@ class HAWC2SOutputBase(object):
     controller_data: DTUBasicControllerVT
         Variable tree containing the controller tuning inputs.
 
+    Exalmple
+    --------
+
+    >>> output = HAWC2SOutputBase()
+    >>> output.case_id = wrapper.case_id
+    >>> output.commands = writer.vartrees.h2s.commands
+    >>> output.execute()
+        
     """
     def __init__(self):
         self.case_id = ''
