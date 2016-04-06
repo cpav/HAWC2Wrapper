@@ -1,3 +1,123 @@
 ===========
 Usage Guide
 ===========
+
+The wrapper is devided in the following main blocks:
+
+* Wind turbine **variable trees** (``hawc2_vartrees.py`` and ``vartrees.py``); a definition of a class, composed by several hinerited classes, that defines the turbine;
+* A **reader** (``hawc2_inputreader.py``, ``hawc2_inputdict.py``), that reads a reference master file and store all the data;
+* A **writer** (``hawc2_inputwriter.py``), that writes the data of a turbine into an htc file;
+* An **executer** (``hawc2_wrapper.py``), that executes HAWC2 or HAWC2s for a given htc file;
+* A **postprocessor** (``hawc2_output.py``), that reads result files, performs post processing, and stores them;
+* An OpenMDAO **workflow** (``hawc2_aeroelasticsolver.py`` and ``hawc2s_aeroelasticsolver.py``), that performs the entire worflow.
+
+The following sections describes each of these blocks.
+
+Variable tree
+-------------
+
+The wind turbine is defined in the wrapper through a variable tree.
+The variable tree is defined from the class ``HAWC2VarTrees`` and it has the following structure::
+
+    attr: sim(HAWC2Simulation())
+        attr: time_stop, solvertype, convergence_limits, on_no_convergence, max_iterations, newmark_deltat, eig_out, logfile
+    
+    attr: wind(HAWC2Wind())
+        attr: sdensity, wsp, tint, horizontal_input, center_pos0, windfield_rotations, shear_type, shear_factor, turb_format, tower_shadow_method, scale_time_start, wind_ramp_t0, wind_ramp_t1, wind_ramp_factor0, wind_ramp_factor1, wind_ramp_abs, iec_gust, iec_gust_type, G_A, G_phi0 ,G_t0, G_T
+    
+    attr: aero(HAWC2Aero())
+        attr: nblades, hub_vec_mbdy_name, hub_vec_coo, links, induction_method, aerocalc_method, aerosections, tiploss_method, dynstall_method, ae_sets, ae_filename, pc_filename, aero_distribution_file, aero_distribution_set
+
+    attr: aerodrag = HAWC2AeroDrag()
+        attr: elements (list of HAWC2AeroDragElement)
+            attr: mbdy_name, dist, sections, calculation_points
+
+    attr: blade_ae(HAWC2BladeGeometry())
+        attr: radius , s, chord, rthick, aeset
+
+    attr: airfoildata(HAWC2AirfoilData())
+        attr: nset, desc, pc_sets
+
+    attr: output(HAWC2OutputVT())
+        attr: filename, time_start, time_stop, out_format, out_buffer, res_dir
+
+    attr: main_bodies(HAWC2MainBodyList())
+        attr: body_name(HAWC2MainBody()) (body_name depends on the name of the body)
+            attr: body_name, body_type, st_filename, st_input_type, beam_structure, body_set, nbodies, node_distribution, damping_type, damping_posdef, damping_aniso, copy_main_body, c12axis, concentrated_mass
+            attr: orientations (list of HAWC2OrientationBase or HAWC2OrientationRelative)
+                HAWC2OrientationBase attr: type, body, inipos, body_eulerang
+                HAWC2OrientationRelative attr: type, body1, body2, body2_eulerang, mbdy2_ini_rotvec_d1
+            var: constraints (list of classes)
+                class: HAWC2ConstraintFix0
+                    attr: con_type, mbdy, disable_at
+                class: HAWC2ConstraintFix1
+                    attr: con_type, mbdy1, mbdy2, disable_at
+                class: HAWC2ConstraintFix23
+                    attr: con_type, mbdy, dof
+                class: HAWC2ConstraintFix4
+                    attr: con_type, mbdy1, mbdy2, time
+                class: HAWC2ConstraintBearing12
+                    attr: name, con_type, mbdy1, mbdy2, bearing_vector, disable_at
+                class: HAWC2ConstraintBearing3
+                    attr: name, con_type, mbdy1, mbdy2, bearing_vector, omegas
+                class: HAWC2ConstraintBearing45
+                    attr: name, con_type, mbdy1, mbdy2, bearing_vector
+    
+    attr: dlls(HAWC2Type2DLLList())
+        attr: dll_name(HAWC2Type2DLL()) (dll_name depends on the name of the DLL)
+            attr:  name, filename, dll_subroutine_init, dll_subroutine_update, arraysizes_init, arraysizes_update, deltat, output
+            attr: output(HAWC2Type2DLLIO())
+                attr: out_dic, action_dic
+            attr: actions(HAWC2Type2DLLIO())
+                attr: out_dic, action_dic
+            attr: dll_init(DTUBasicControllerVT() or HAWC2Type2DLLinit())
+                DTUBasicControllerVTI(HAWC2Type2DLLinit()) 
+                    attr: Vin, Vout, nV, ratedPower = 0 minRPM, maxRPM, gearRatio, designTSR, active, FixedPitch, maxTorque, minPitch, maxPitch, maxPitchSpeed, maxPitchAcc, generatorFreq, generatorDamping, ffFreq, Qg, pgTorque, igTorque, dgTorque, pgPitch, igPitch, dgPitch, prPowerGain, intPowerGain, generatorSwitch, KK1, KK2, nlGainSpeed, softDelay, cutin_t0, stop_t0, TorqCutOff, stop_type, PitchDelay1, PitchVel1, PitchDelay2, PitchVel2, generatorEfficiency, overspeed_limit, minServoPitch, maxServoPitchSpeed, maxServoPitchAcc, poleFreqTorque, poleDampTorque, poleFreqPitch, .poleDampPitch, gainScheduling, prvs_turbine, rotorspeed_gs, Kp2, Ko1, Ko2
+                HAWC2Type2DLLinit attr:
+                    attr: init_dic
+
+    attr: h2s(HAWC2SVar())
+        attr: cases, wsp_cases, wsp_curve, pitch_curve, rpm_curve, operational_data_filename, commands
+        attr: ground_fixed(HAWC2SBody()), rotating_axissym(HAWC2SBody()), rotating_threebladed(HAWC2SBody())
+            attr: main_body, log_decrements
+        attr: second_order_actuator(SecondOrderActuator())
+            attr: name, frequency, damping
+        attr: options(HAWC2SCommandsOpt())
+            attr: include_torsiondeform, bladedeform, tipcorrect, induction, gradients, blade_only, matrixwriteout, eigenvaluewriteout, frequencysorting, number_of_modes, maximum_damping, minimum_frequency, zero_pole_threshold, aero_deflect_ratio, vloc_out, regions, set_torque_limit
+        attr: ch_list_in(HAWC2OutputListVT()), ch_list_out(HAWC2OutputListVT())
+            attr: sensor_list
+
+    attr: body_order, dlls_order
+
+
+Reader
+------
+The module ``hawc2_inputreader`` contains the class ``HAWC2InputReader``. This class can read both HAWC2 and HAWCStab2 htc files and creates a corresponding variable tree.
+
+This class calls internally the class ``HAWC2InputDict`` contained in the module ``hawc2_inputdict``. This second class is the one that actually reads the htc file and it stores it into a dictionary. The class ``HAWC2InputReader`` interprets the dictionary and creates the varibale tree.
+
+An example of the use of the class is::
+    
+    from hawc2_inputreader import HAWC2InputReader
+    
+    Reader = HAWC2InputReader('hawc2_master.htc')
+    Reader.execute()
+    
+After the execution the object *Reader* contains and attribute *vartrees* that contains the variable tree describing the turbine.
+
+
+
+Writer
+------
+
+
+Executer
+--------
+
+
+Postprocessor
+-------------
+
+
+Workflow
+--------
