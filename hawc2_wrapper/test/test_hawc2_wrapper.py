@@ -353,6 +353,53 @@ class Test(unittest.TestCase):
             self.compare_lists(output.stats['std'], std_ref[icase])
             self.compare_lists([eq[:1] for eq in output.eq], m3_ref[icase])
 
+    def test_DLC_envelope(self):
+
+        opt_tags = dlcdefs.excel_stabcon('./DLCs/', fext='xls')
+
+        reader = HAWC2InputReader()
+        reader.htc_master_file = 'main_h2_envelope.htc'
+        reader.execute()
+
+        for icase, case in enumerate(opt_tags):
+            case['[run_dir]'] = ''
+            writer = HAWC2InputWriter()
+            writer.vartrees = reader.vartrees
+            writer.vartrees.aero.ae_filename = 'data/'+case['[Case id.]']+'_ae.dat'
+            writer.vartrees.aero.pc_filename = 'data/'+case['[Case id.]']+'_pc.dat'
+            writer.case_id = case['[Case id.]']
+            writer.vartrees.tags2var(case)
+            writer.execute()
+
+            wrapper = HAWC2Wrapper()
+            wrapper.copyback_results = False
+            wrapper.hawc2bin = 'HAWC2mb.exe'
+            wrapper.log_directory = case['[log_dir]']
+            wrapper.case_id = writer.case_id
+            #wrapper.compute()
+
+            config = {}
+            config['neq'] = 90
+            config['no_bins'] = 46
+            config['m'] = [12]
+            
+            ch_list = []
+            for iblade in range(1, 4):
+                for i in range(1, 6):
+                    ch_list.append(['blade%i-blade%i-node-%3.3i-momentvec-x'%(iblade, iblade, i),
+                                    'blade%i-blade%i-node-%3.3i-momentvec-y'%(iblade, iblade, i),
+                                    'blade%i-blade%i-node-%3.3i-momentvec-z'%(iblade, iblade, i), 
+                                    'blade%i-blade%i-node-%3.3i-forcevec-x'%(iblade, iblade, i),
+                                    'blade%i-blade%i-node-%3.3i-forcevec-y'%(iblade, iblade, i),
+                                    'blade%i-blade%i-node-%3.3i-forcevec-z'%(iblade, iblade, i)])
+                                
+            config['ch_envelope'] = ch_list
+            output = HAWC2Output(config)
+            output.execute(case)
+            print output.envelope
+            
+            
+
 
 if __name__ == '__main__':
 

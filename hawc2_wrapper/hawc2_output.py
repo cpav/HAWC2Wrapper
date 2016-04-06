@@ -45,6 +45,10 @@ class HAWC2Output(object):
         self.no_bins = config['no_bins']
         self.neq = config['neq']
         self.m = config['m']
+        if 'ch_envelope' not in config.keys():
+            self.ch_envelope = []
+        else:
+            self.ch_envelope = config['ch_envelope']
 
     def execute(self, case_tags):
 
@@ -59,8 +63,12 @@ class HAWC2Output(object):
             self.eq.append(case.res.calc_fatigue(s, no_bins=self.no_bins,
                                                  neq=self.neq,
                                                  m=self.m))
-
-
+        if self.ch_envelope != []:
+            self.envelope = case.compute_envelope(case.sig, self.ch_envelope)
+        else:
+            self.envelope = {}
+            
+        
 class HAWC2OutputCompact(HAWC2Output):
     """
     HAWC2SOutput: HAWC2Output class that organize results in
@@ -102,6 +110,9 @@ class HAWC2OutputCompact(HAWC2Output):
                 np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
             self.outputs_fatigue[:, ich] = \
                 np.array(self.eq[self.ch_dict[ch]['chi']])
+
+        for ch in self.ch_envelope:
+            setattr(self, 'env_'+ch[0].replace('-', '_'), np.array(self.envelope[ch[0]]))
 
 
 class HAWC2SOutputBase(object):

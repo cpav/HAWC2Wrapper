@@ -340,28 +340,7 @@ class HAWC2AeroElasticSolver(Group):
             config['HAWC2InputWriter']['data_directory'] = 'data'
         if 'turb_directory' not in config['HAWC2InputWriter'].keys():
             config['HAWC2InputWriter']['turb_directory'] = './../turb'
-#    def configure_freq_placement(self, freq_type='ae'):
-#
-#        self.h2.configure_freq_placement_cid(freq_type=freq_type)
-#        self.connect('h2.freq_factor', 'h2post.freq_factor_cid')
-#        self.create_passthrough('h2post.freq_factor')
-#        self.create_passthrough('h2.mode_freq')
-#        self.create_passthrough('h2.mode_damp')
-#        self.create_passthrough('h2.mode_target_freq')
-#        self.create_passthrough('h2.mode_target_damp')
-#
-#    def configure_controller_tuning(self):
-#
-#        self.controller = self.reader.vartrees.dlls.risoe_controller.dll_init.copy()
-#        for att in self.controller.list_vars():
-#            if att == 'designTSR':
-#                continue
-#            self.connect('controller.'+att,
-#                         'casegen.vartrees.dlls.risoe_controller.dll_init.'+att)
-#            self.connect('controller.'+att,
-#                         'vartrees_out.dlls.risoe_controller.dll_init.'+att)
-#
-#    """
+
 
 if __name__ == '__main__':
 

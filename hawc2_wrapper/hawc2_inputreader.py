@@ -27,7 +27,6 @@ class HAWC2InputReader(object):
     """
     def __init__(self, htc_master_file='hawc_master.htc'):
         self.htc_master_file = htc_master_file
-        self.htc = []
         self.vartrees = HAWC2VarTrees()
 
     def execute(self):
