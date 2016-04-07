@@ -3,6 +3,7 @@ Module containing classes to read HAWC2 and HAWCStab2 results and perform basic
 postprocessing.
 """
 import numpy as np
+import os
 import glob
 import re
 from wetb.prepost import Simulations
@@ -357,16 +358,54 @@ class HAWC2SOutput(HAWC2SOutputBase):
         Integrated lateral force [N].
     Fy : array [nW, nS]
         Intagrated longitudinal force [N].
+    Fx_e: array [nW, nS]
+        Intagrated sectional in plane force [N]
+        in the element coordinate system.
+    Fy_e: array [nW, nS]
+        Intagrated sectional out of plane force [N]
+        in the element coordinate system.
+    Fz_e: array [nW, nS]
+        Intagrated sectional radial force [N]
+        in the element coordinate system.
+    Mx_e: array [nW, nS]
+        Intagrated sectional in plane moment [Nm]
+        in the element coordinate system.
+    My_e: array [nW, nS]
+        Intagrated sectional out of plane moment [Nm]
+        in the element coordinate system.
+    Mz_e: array [nW, nS]
+        Intagrated sectional radial moment [Nm]
+        in the element coordinate system.
+    Fx_r: array [nW, nS]
+        Intagrated sectional in plane force [N]
+        in the rotor coordinate system.
+    Fy_r: array [nW, nS]
+        Intagrated sectional out of plane force [N]
+        in the rotor coordinate system.
+    Fz_r: array [nW, nS]
+        Intagrated sectional radial force [N]
+        in the rotor coordinate system.
+    Mx_r: array [nW, nS]
+        Intagrated sectional in plane moment [Nm]
+        in the rotor coordinate system.
+    My_r: array [nW, nS]
+        Intagrated sectional out of plane moment [Nm]
+        in the rotor coordinate system.
+    Mz_r: array [nW, nS]
+        Intagrated sectional radial moment [Nm]
+        in the rotor coordinate system.
     outlist : list
         List with the names of all the outputs
     """
     def __init__(self):
         super(HAWC2SOutput, self).__init__()
-        self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT',
-                         'Mx', 'My', 'Mz', 'Fx', 'Fy']
+        self.outlist1 = ['wsp', 'pitch', 'rpm', 'P', 'Q', 'T', 'CP', 'CT', 'Mx',
+                        'My', 'Mz', 'Fx', 'Fy']
         self.outlist2 = ['aoa', 'Ft', 'Fn', 'cl', 'cd', 'cm', 'ct', 'cp',
                          'v_a', 'v_t', 'disp_x', 'disp_y',
-                         'disp_z', 'disp_rot_z']
+                        'disp_z', 'disp_rot_z']
+        self.outlist3 = ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e',
+                         'Fx_r', 'Fy_r', 'Fz_r', 'Mx_r', 'My_r', 'Mz_r']
 
     def execute(self):
         if ('save_power' not in self.commands) or \
@@ -414,28 +453,67 @@ class HAWC2SOutput(HAWC2SOutputBase):
         self.Fy = np.zeros(nW)
 
         for iw, wsp in enumerate(self.wsp):
-            data = self.blade_loads_data[iw]
-            if len(data.shape) == 1:
-                data = data.reshape(1, data.shape[0])
-            self.s = data[:, 0] / data[-1, 0]
-            self.aoa[iw, :] = data[:, 4] * 180. / np.pi
-            self.Ft[iw, :] = data[:, 6]
-            self.Fn[iw, :] = data[:, 7]
-            self.cl[iw, :] = data[:, 16]
-            self.cd[iw, :] = data[:, 17]
-            self.cm[iw, :] = data[:, 18]
-            self.ct[iw, :] = data[:, 32]
-            self.cp[iw, :] = data[:, 33]
-            self.v_a[iw, :] = data[:, 26]
-            self.v_t[iw, :] = data[:, 27]
-            self.Fx[iw] = np.trapz(data[:, 6], x=data[:, 0])
-            self.Fy[iw] = np.trapz(data[:, 7], x=data[:, 0])
-            main_axis = data[:, 13:16]
-            main_axis[:, 2] *= -1.
-            self.disp_x[iw, :] = main_axis[:, 0]
-            self.disp_y[iw, :] = main_axis[:, 1]
-            self.disp_z[iw, :] = main_axis[:, 2]
-            self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
+            try:
+                data = self.blade_loads_data[iw]
+                if len(data.shape) == 1:
+                    data = data.reshape(1, data.shape[0])
+                self.s = data[:, 0] / data[-1, 0]
+                self.aoa[iw, :] = data[:, 4] * 180. / np.pi
+                self.Ft[iw, :] = data[:, 6]
+                self.Fn[iw, :] = data[:, 7]
+                self.cl[iw, :] = data[:, 16]
+                self.cd[iw, :] = data[:, 17]
+                self.cm[iw, :] = data[:, 18]
+                self.ct[iw, :] = data[:, 32]
+                self.cp[iw, :] = data[:, 33]
+                self.v_a[iw, :] = data[:, 26]
+                self.v_t[iw, :] = data[:, 27]
+                self.Fx[iw] = np.trapz(data[:, 6], x=data[:, 0])
+                self.Fy[iw] = np.trapz(data[:, 7], x=data[:, 0])
+                main_axis = data[:, 13:16]
+                main_axis[:, 2] *= -1.
+                self.disp_x[iw, :] = main_axis[:, 0]
+                self.disp_y[iw, :] = main_axis[:, 1]
+                self.disp_z[iw, :] = main_axis[:, 2]
+                self.disp_rot_z[iw, :] = data[:, 28] * 180. / np.pi
+            except:
+                pass
+
+        nfS = self.blade_fext_loads_data[0].shape[0]
+
+        self.Fx_e = np.zeros((nW, nfS))
+        self.Fy_e = np.zeros((nW, nfS))
+        self.Fz_e = np.zeros((nW, nfS))
+        self.Mx_e = np.zeros((nW, nfS))
+        self.My_e = np.zeros((nW, nfS))
+        self.Mz_e = np.zeros((nW, nfS))
+        self.Fx_r = np.zeros((nW, nfS))
+        self.Fy_r = np.zeros((nW, nfS))
+        self.Fz_r = np.zeros((nW, nfS))
+        self.Mx_r = np.zeros((nW, nfS))
+        self.My_r = np.zeros((nW, nfS))
+        self.Mz_r = np.zeros((nW, nfS))
+
+        for iw, wsp in enumerate(self.wsp):
+            try:
+                data = self.blade_fext_loads_data[iw]
+                if len(data.shape) == 1:
+                    data = data.reshape(1, data.shape[0])
+                self.s_e = data[:, 0] / data[-1, 0]
+                self.Fx_e[iw, :] = data[:, 2]
+                self.Fy_e[iw, :] = data[:, 3]
+                self.Fz_e[iw, :] = data[:, 4]
+                self.Mx_e[iw, :] = data[:, 5]
+                self.My_e[iw, :] = data[:, 6]
+                self.Mz_e[iw, :] = data[:, 7]
+                self.Fx_r[iw, :] = data[:, 8]
+                self.Fy_r[iw, :] = data[:, 9]
+                self.Fz_r[iw, :] = data[:, 10]
+                self.Mx_r[iw, :] = data[:, 11]
+                self.My_r[iw, :] = data[:, 12]
+                self.Mz_r[iw, :] = data[:, 13]
+            except:
+                pass
 
 
 class HAWC2SOutputCompact(HAWC2SOutput):
@@ -453,6 +531,10 @@ class HAWC2SOutputCompact(HAWC2SOutput):
         Rotor outputs.
 
     outputs_blade: array
+        Blade outputs.
+    outputs_blade: array
+        Blade outputs.
+    outputs_blade_fext: array
         Blade outputs.
     """
     def __init__(self, config):
@@ -475,7 +557,8 @@ class HAWC2SOutputCompact(HAWC2SOutput):
         super(HAWC2SOutputCompact, self).execute()
 
         nW = len(self.wsp)
-        nS = len(self.blade_loads_data[0][:, 0])
+        nS = self.blade_loads_data[0].shape[0]
+        nfS = self.blade_fext_loads_data[0].shape[0] + 1
 
         self.outputs_rotor = np.zeros([nW, len(self.sensor_rotor)])
         for i, sensor in enumerate(self.sensor_rotor):
@@ -484,6 +567,14 @@ class HAWC2SOutputCompact(HAWC2SOutput):
         self.outputs_blade = np.zeros([nW, len(self.sensor_blade)*nS])
         for i, sensor in enumerate(self.sensor_blade):
             self.outputs_blade[:, i*nS:(i+1)*nS] = getattr(self, sensor)
+
+        # fext loads are extrapolated to the inner-most section using polyfit
+        self.outputs_blade_fext = np.zeros([nW, 6*nfS])
+        for i, sensor in enumerate(['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']):
+            d = getattr(self, sensor)
+            f0 = np.polyval(np.polyfit(self.s_e[:2], d[0, :2], 1), 0.)
+            self.outputs_blade_fext[:, i*nfS] = f0
+            self.outputs_blade_fext[:, (i*nfS+1):(i+1)*nfS] = d[0, :]
 
 
 class FreqDampTarget(object):
