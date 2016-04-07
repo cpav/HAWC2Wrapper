@@ -1,177 +1,130 @@
 """
+Module containing classes to read HAWC2 and HAWCStab2 results and perform basic
+postprocessing.
 """
 import numpy as np
 import os
 import glob
 import re
+from wetb.prepost import Simulations
 
 from hawc2_vartrees import DTUBasicControllerVT
 
 
-class HAWC2Dataset(object):
-    """
-
-    """
-    # TODO: link with pdap!!!!
-    def __init__(self, casename=None, readonly=False):
-
-        self.casename = casename
-        self.readonly = readonly
-        self.iknown = []
-        self.data = None
-
-        if os.path.isfile(self.casename + ".sel"):
-            self._read_hawc2_sel_file()
-
-        else:
-            print "file not found: ", casename + '.sel'
-
-    def _read_hawc2_sel_file(self):
-        """
-        Some title
-        ==========
-
-        Parameters
-        ----------
-        signal : ndarray
-            some description
-
-        Returns
-        -------
-        output : int
-            describe variable
-        """
-
-        # read *.sel hawc2 output file for result info
-        fid = open(self.casename + '.sel', 'r')
-        lines = fid.readlines()
-        fid.close()
-
-        # find general result info (number of scans, number of channels,
-        # simulation time and file format)
-        temp = lines[8].split()
-        self.scans = int(temp[0])
-        self.channels = int(temp[1])
-        self.total_time = float(temp[2])
-        self.frequency = self.scans / self.total_time
-        self.timestep = 1. / self.frequency
-        self.time = np.linspace(0, self.total_time, self.scans)
-        self.format = temp[3]
-        # reads channel info (name, unit and description)
-        name = []
-        unit = []
-        description = []
-        for i in range(0, self.channels):
-            temp = str(lines[i + 12][12:43])
-            name.append(temp.strip())
-            temp = str(lines[i + 12][43:50])
-            unit.append(temp.strip())
-            temp = str(lines[i + 12][54:100])
-            description.append(temp.strip())
-        self.chinfo = {'name': name, 'unit': unit, 'desc': description}
-        # if binary file format, scaling factors are read
-        if self.format.lower() == 'binary':
-            self.scale_factor = np.zeros(self.channels)
-            self.fileformat = 'HAWC2_BINARY'
-            for i in range(0, self.channels):
-                self.scale_factor[i] = float(lines[i + 12 + self.channels + 2])
-        else:
-            self.fileformat = 'HAWC2_ASCII'
-
-    def _read_binary(self, channel_ids=[]):
-        """Read results in binary format"""
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        fid = open(self.casename + '.dat', 'rb')
-        data = np.zeros((self.scans, len(channel_ids)))
-        j = 0
-        for i in channel_ids:
-            fid.seek(i * self.scans * 2, 0)
-            data[:, j] = np.fromfile(fid, 'int16', self.scans) * self.scale_factor[i]
-            j += 1
-        fid.close()
-        return data
-
-    def _read_ascii(self, channel_ids=[]):
-        """Read results in ASCII format"""
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        temp = np.loadtxt(self.casename + '.dat', usecols=channel_ids)
-        return temp.reshape((self.scans, len(channel_ids)))
-
-    def _read(self, channel_ids=[]):
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        if self.fileformat == 'HAWC2_BINARY':
-            return self._read_binary(channel_ids)
-        elif self.fileformat == 'HAWC2_ASCII':
-            return self._read_ascii(channel_ids)
-
-    def read_all(self):
-
-        self.data = self._read()
-        self.iknown = range(0, self.channels)
-
-    def get_channels(self, channel_ids=[]):
-        """  """
-
-        if not channel_ids:
-            channel_ids = range(0, self.channels)
-        elif max(channel_ids) >= self.channels:
-            print "channel number out of range"
-            return
-
-        if self.readonly:
-            return self._read(channel_ids)
-
-        else:
-            # sort into known channels and channels to be read
-            I1 = []
-            I2 = []   # I1=Channel mapping, I2=Channels to be read
-            for i in channel_ids:
-                try:
-                    I1.append(self.iknown.index(i))
-                except:
-                    self.iknown.append(i)
-                    I2.append(i)
-                    I1.append(len(I1))
-            # read new channels
-            if I2:
-                temp = self._read(I2)
-                # add new channels to Data
-                if isinstance(self.data, np.ndarray):
-                    self.data = np.append(self.data, temp, axis=1)
-                # if first call, data is empty
-                else:
-                    self.data = temp
-            return self.data[:, tuple(I1)]
-
-
 class HAWC2OutputBase(object):
+    """
+    Class that reads an HAWC2 output file and computes statistics and damage
+    equivalent load of all the channels in the file.
 
-    def __init__(self):
+    Parameters
+    ----------
 
-        self.datasets = HAWC2Dataset()
-        self.case_id = 'hawc2_case'
-        self.res_directory = ''
+    case_tags: dict
+        Dictionary with tags as keys. Keys required [run_dir], [res_dir], and
+        [case_id].
+    config: dict
+        * m: list. Values of the slope of the SN curve.
+        * no_bins: int. Number of bins for the binning of the amplitudes.
+        * neq: int. Number of equivalent cycles
 
-    def execute(self):
+    Returns
+    -------
+    stats: dict
+        Dictionary containing lists of the statistics of each channel. The keys
+        are 'std', 'rms', 'min', 'int', 'max', 'range', 'absmax', and 'mean'.
+    eq: list
+        List containing a list of each channel containing the damage equivalent
+        load for each value of m.
 
-        self._logger.info('reading outputs for case %s ...' % (self.case_id))
-        # this is fragile since it will grab all files
-        # which may be old ...
+    Example
+    -------
+    >>> case = {}
+    >>> case['[case_id]'] = 'dlc12_wsp04_wdir000_s1001'
+    >>> case['[res_dir]'] = 'res/dlc12_iec61400-1ed3'
+    >>> config = {}
+    >>> config['neq'] = 600
+    >>> config['no_bins'] = 2**7
+    >>> config['m'] = [12]
+    >>> output = HAWC2OutputBase(config)
+    >>> output.execute(case)
 
-        self.datasets = []
-        sets = glob.glob(self.res_directory+'\*.sel')
+    """
+    def __init__(self, config):
 
-        for s in sets:
-            name = re.sub("\.sel$", '', s)
-            case = HAWC2Dataset(casename=name)
-            case.read_all()
-            self.datasets.append(case)
+        self.eq = []
+        self.stats = []
+
+        self.no_bins = config['no_bins']
+        self.neq = config['neq']
+        self.m = config['m']
+        if 'ch_envelope' not in config.keys():
+            self.ch_envelope = []
+        else:
+            self.ch_envelope = config['ch_envelope']
+
+    def execute(self, case_tags):
+
+        print 'reading outputs for case %s ...' % case_tags['[case_id]']
+        case_tags['[run_dir]'] = ''
+        case = Simulations.Cases(case_tags)
+        case.load_result_file(case_tags)
+        self.ch_dict = case.res.ch_dict
+        self.stats = case.res.calc_stats(case.sig, i0=0, i1=None)
+        self.eq = []
+        for s in case.sig.T:
+            self.eq.append(case.res.calc_fatigue(s, no_bins=self.no_bins,
+                                                 neq=self.neq,
+                                                 m=self.m))
+        if self.ch_envelope != []:
+            self.envelope = case.compute_envelope(case.sig, self.ch_envelope)
+        else:
+            self.envelope = {}
+
+
+class HAWC2OutputCompact(HAWC2OutputBase):
+    """
+    HAWC2SOutput: HAWC2Output class that organize results in
+    compact arrays to minimize the number of outputs. The outputs are selected
+    with a dictionary passed in the initialization.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    outputs_statistics: array
+        Statistics outputs.
+
+    outputs_fatigue: array
+        Fatigue outputs.
+    """
+    def __init__(self, config):
+        super(HAWC2OutputCompact, self).__init__(config)
+
+        self.channel = config['channels']
+
+        if 'stat_list' in config.keys():
+            self.stat_list = config['stat_list']
+        else:
+            self.stat_list = ['std', 'rms', 'min', 'int', 'max', 'range',
+                              'absmax', 'mean']
+        self.Nch = len(self.channel)
+        self.Nstat = len(self.stat_list)
+
+    def execute(self, case_tags):
+        super(HAWC2OutputCompact, self).execute(case_tags)
+
+        self.outputs_statistics = np.zeros([self.Nstat, self.Nch])
+        self.outputs_fatigue = np.zeros([len(self.m), self.Nch])
+
+        for ich, ch in enumerate(self.channel):
+            self.outputs_statistics[:, ich] = \
+                np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
+            self.outputs_fatigue[:, ich] = \
+                np.array(self.eq[self.ch_dict[ch]['chi']])
+
+        for ch in self.ch_envelope:
+            setattr(self, 'env_'+ch[0].replace('-', '_'), np.array(self.envelope[ch[0]]))
 
 
 class HAWC2SOutputBase(object):
@@ -209,6 +162,14 @@ class HAWC2SOutputBase(object):
     controller_data: DTUBasicControllerVT
         Variable tree containing the controller tuning inputs.
 
+    Exalmple
+    --------
+
+    >>> output = HAWC2SOutputBase()
+    >>> output.case_id = wrapper.case_id
+    >>> output.commands = writer.vartrees.h2s.commands
+    >>> output.execute()
+        
     """
     def __init__(self):
         self.case_id = ''
@@ -325,28 +286,6 @@ class HAWC2SOutputBase(object):
                         self.blade_loads_data.append(data)
                 else:
                     self.blade_loads_data.append(np.zeros((30, 34)))
-
-                # read fext files
-                self.blade_fext_loads_data = []
-                wsp_array = []
-                wsp_files = glob.glob(self.case_id+'_fext_u*.ind')
-                if len(wsp_files) > 0:
-                    for f in wsp_files:
-                        w = float(re.sub('%s' % self.case_id + '_fext_u',
-                                         '', f).strip('.ind'))/1000.
-                        wsp_array.append(w)
-                    wsp_array.sort()
-
-                    for wsp in wsp_array:
-                        filename = self.case_id + '_fext_u' + \
-                                   str(int(wsp*1000)) + '.ind'
-                        data = np.loadtxt(filename)
-                        self.blade_fext_loads_data.append(data)
-                else:
-                    # fixme
-                    self.blade_fext_loads_data.append(np.zeros((30, 34)))
-            else:
-                print 'Command "%s" not known.' % name
 
 
 class HAWC2SOutput(HAWC2SOutputBase):
@@ -638,144 +577,6 @@ class HAWC2SOutputCompact(HAWC2SOutput):
             self.outputs_blade_fext[:, (i*nfS+1):(i+1)*nfS] = d[0, :]
 
 
-class FreqDampTargetByIndex(object):
-    """
-    Component to compute th cost function for freqeuncies and dampings
-    placement given the indexed of the modes
-
-    Parameters
-    ----------
-    freqdamp: array
-        Two dimensional array containing the freqeuncies and dampings at
-        different operational points.
-
-    mode_index: array
-        Two dimensional array containing the indexed of the freqeuncies and
-        dampings to be placed at different operational points.
-
-    mode_target_freq: array
-        Two dimenstional array containing the target values of the freqeuncies
-        at operational points. Has to be of the same size as mode_index.
-
-    mode_target_damp: array
-        Two dimenstional array containing the target values of the dampings at
-        operational points. Has to be of the same size as mode_index.
-
-    freq_factor: list
-        RMS of the errors
-
-    Example
-    -------
-
-    """
-    def __init__(self):
-        self.freqdamp = np.array([0.])
-        self.mode_index = np.array([0.])
-        self.mode_target_freq = np.array([0.])
-        self.mode_target_damp = np.array([0.])
-
-        self.freq_factor = []
-
-    def execute(self):
-        """
-        Execute the computation of the objective function for frequency and
-        dampings placement.
-        """
-        freq_factor = []
-        Nmodes = (self.freqdamp.shape[1]-1)/2
-        # for loop along the different operational points
-        for freqdamp in self.freqdamp:
-            for mode_index, mode_target_freq, mode_target_damp in \
-                    zip(self.mode_index, self.mode_target_freq,
-                        self.mode_target_damp):
-                if freqdamp[0] == mode_index[0]:
-                    # for loop along the different target modes
-                    for index, target_freq, target_damp in \
-                            zip(mode_index[1:], mode_target_freq[1:],
-                                mode_target_damp[1:]):
-
-                        if target_freq != -1:
-                            freq_factor.append(abs(freqdamp[index] /
-                                                   target_freq - 1))
-                            print 'Freq: ', freqdamp[index],\
-                                  'Target Freq: ', target_freq,\
-                                  'Diff.:', freq_factor[-1]
-                        if target_damp != -1:
-                            freq_factor.append(abs(freqdamp[index+Nmodes] /
-                                                   target_damp - 1))
-                            print 'Damp: ', freqdamp[index+Nmodes],\
-                                  'Target Damp:', target_damp,\
-                                  'Diff.:', freq_factor[-1]
-        self.freq_factor.freq_factor = freq_factor
-
-
-class ModeTrackingByFreqDamp(object):
-    """
-    Component to compute the indexes of modes for given frequencies and
-    dampings
-
-    Parameters
-    ----------
-    freqdamp: array
-        One dimensional array containing the freqeuncies and dampings.
-
-    mode_freq: array
-        One dimenstional array containing the reference values of the mode
-        freqeuncies.
-
-    mode_damp: array
-        One dimenstional array containing the reference values of the mode
-        dampings.The dampings has to be of the same mode indicated by the
-        freqeuncies in mode_freq.
-
-    mode_index: array
-        One dimensional array containing the indexed of the tracked modes.
-
-    Example
-    -------
-
-    """
-    def __init__(self):
-        self.freqdamp = np.array([0.])
-        self.mode_freq = np.array([0.])
-        self.mode_damp = np.array([0.])
-
-        self.mode_index = np.array([0.])
-
-    def execute(self):
-        ws = self.mode_freq[:, 0]
-        Nmodes = (self.freqdamp.shape[1]-1)/2  # remove the wind speed
-        Nop = self.mode_freq.shape[0]
-        Nm = self.mode_freq.shape[1]
-        self.mode_index = np.zeros([Nop, Nm])
-        iop = -1
-        # Loop the operational points
-        for freqdamp in self.freqdamp:
-            # select right wind speed of reference values
-            if freqdamp[0] in ws:
-                iop += 1
-                for w, iw in zip(ws, range(len(ws))):
-                    if w == freqdamp[0]:
-                        break
-                mode_freq = self.mode_freq[iw, 1:]
-                mode_damp = self.mode_damp[iw, 1:]
-
-                allfreq = freqdamp[1:Nmodes+1]
-                alldamp = freqdamp[Nmodes+1:]
-                self.mode_index[iop, 0] = freqdamp[0]
-                # Loop the modes to be tracked
-                for freq, damp, im in zip(mode_freq, mode_damp, range(1, Nm)):
-
-                    err = np.sqrt(((allfreq - freq) / freq)**2 +
-                                  ((alldamp - damp) / damp)**2)
-                    if err[err.argmin()] > 1:
-                        print 'Distance between computed mode freqeuncies ' +\
-                              'and dampings and reference values for ' +\
-                              'tracking is high! %f' % err[err.argmin()]
-
-                    self.mode_index[iop, im] = err.argmin() + 1
-
-
 class FreqDampTarget(object):
     """
     Component to compute th cost function for freqeuncies and dampings
@@ -810,21 +611,77 @@ class FreqDampTarget(object):
         self.mode_damp = np.array([0.])
         self.mode_target_freq = np.array([0.])
         self.mode_target_damp = np.array([0.])
-        self.freq_factor = []
+
+    def mode_tracking_freq_damp(self):
+        """
+        Component to compute the indexes of modes for given frequencies and
+        dampings
+        """
+        ws = self.mode_freq[:, 0]
+        Nmodes = (self.freqdamp.shape[1]-1)/2  # remove the wind speed
+        Nop = self.mode_freq.shape[0]
+        Nm = self.mode_freq.shape[1]
+        self.mode_index = np.zeros([Nop, Nm])
+        iop = -1
+        # Loop the operational points
+        for freqdamp in self.freqdamp:
+            # select right wind speed of reference values
+            if freqdamp[0] in ws:
+                iop += 1
+                for w, iw in zip(ws, range(len(ws))):
+                    if w == freqdamp[0]:
+                        break
+                mode_freq = self.mode_freq[iw, 1:]
+                mode_damp = self.mode_damp[iw, 1:]
+
+                allfreq = freqdamp[1:Nmodes+1]
+                alldamp = freqdamp[Nmodes+1:]
+                self.mode_index[iop, 0] = freqdamp[0]
+                # Loop the modes to be tracked
+                for freq, damp, im in zip(mode_freq, mode_damp, range(1, Nm)):
+
+                    err = np.sqrt(((allfreq - freq) / freq)**2 +
+                                  ((alldamp - damp) / damp)**2)
+                    if err[err.argmin()] > 1:
+                        print 'Distance between computed mode freqeuncies ' +\
+                              'and dampings and reference values for ' +\
+                              'tracking is high! %f' % err[err.argmin()]
+
+                    self.mode_index[iop, im] = err.argmin() + 1
+
+    def freq_damp_target_index(self):
+        """
+        Execute the computation of the objective function for frequency and
+        dampings placement.
+        """
+        freq_factor = []
+        Nmodes = (self.freqdamp.shape[1]-1)/2
+        # for loop along the different operational points
+        for freqdamp in self.freqdamp:
+            for mode_index, mode_target_freq, mode_target_damp in \
+                    zip(self.mode_index, self.mode_target_freq,
+                        self.mode_target_damp):
+                if freqdamp[0] == mode_index[0]:
+                    # for loop along the different target modes
+                    for index, target_freq, target_damp in \
+                            zip(mode_index[1:], mode_target_freq[1:],
+                                mode_target_damp[1:]):
+
+                        if target_freq != -1:
+                            freq_factor.append(abs(freqdamp[index] /
+                                                   target_freq - 1))
+                            print 'Freq: ', freqdamp[index],\
+                                  'Target Freq: ', target_freq,\
+                                  'Diff.:', freq_factor[-1]
+                        if target_damp != -1:
+                            freq_factor.append(abs(freqdamp[index+Nmodes] /
+                                                   target_damp - 1))
+                            print 'Damp: ', freqdamp[index+Nmodes],\
+                                  'Target Damp:', target_damp,\
+                                  'Diff.:', freq_factor[-1]
+        self.freq_factor = np.array(freq_factor)
 
     def execute(self):
 
-        modetrack = ModeTrackingByFreqDamp()
-        modetrack.mode_freq = self.mode_freq
-        modetrack.mode_damp = self.mode_damp
-        modetrack.freqdamp = self.freqdamp
-        modetrack.execute()
-
-        freqtarget = FreqDampTargetByIndex()
-        freqtarget.mode_target_freq = self.mode_target_freq
-        freqtarget.mode_target_damp = self.mode_target_damp
-        freqtarget.freqdamp = self.freqdamp
-        freqtarget.mode_index = modetrack.mode_index
-        freqtarget.execute()
-
-        self.freq_factor = freqtarget.freq_factor
+        self.mode_tracking_freq_damp()
+        self.freq_damp_target_index()

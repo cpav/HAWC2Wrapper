@@ -92,12 +92,12 @@ class Section(object):
 
 class HAWC2InputDict(object):
     """
-    class for reading a HAWC2 htc file
+    Class for reading a HAWC2 htc file.
 
-    file is read into a nested list with Section objects with lists of
+    The file is read into a nested list with Section objects with lists of
     Entry objects with name, val for each input parameter.
 
-    all values are converted to either integer, float or string
+    All values are converted to either integer, float or string.
 
     pc, ae, and st files are not read.
     """
@@ -171,80 +171,26 @@ class HAWC2InputDict(object):
             return False
 
 
-def read_hawc2_st_file(filename, setnum=-1):
+def read_hawc2_st_file(filename, var, setnum=-1):
     """
-    Reader for a HAWC2 beam structure file.
+    Reader for a HAWC2 beam structure file. It creates a dictionary with keys
+    the elements of the list var. The list must contain the name of the
+    variables included in the st file in the correct order. It works for both
+    the standard HAWC2 st input and the fully populated stiffness matrix.
 
-    The format of the file should be:
-    main_s[0] dm[1] x_cg[2] y_cg[3] ri_x[4] ri_y[5] x_sh[6] y_sh[7] E[8] ...
-    G[9] I_x[10] I_y[11] K[12] k_x[13] k_y[14] A[15] pitch[16] x_e[17] y_e[18]
+    Parameters
+    ----------
+    filename: str
+        Name of the file to read.
+    var: list
+        List containing the structural porperties names in the correct order.
+        The list can be found in the class HAWC2BeamStructure
 
-    Sub-classes can overwrite this function to change the reader's behaviour.
-    """
-    right_set = False
-    fid = open(filename, 'r')
-    st_sets = []
-    line = fid.readline()
-    while line:
-        if (line.find('$') != -1) and right_set:
-            ni = int(line.split()[1])
-            st_data = np.zeros((ni, 19))
-            for i in range(ni):
-                tmp = fid.readline().split()
-                st_data[i, :] = [float(tmp[j]) for j in range(19)]
+    Return
+    ------
+    st_sets: list
+        List of dictionaries containning the structural properties.
 
-            st = {}
-            st['s'] = st_data[:, 0]
-            st['dm'] = st_data[:, 1]
-            st['x_cg'] = st_data[:, 2]
-            st['y_cg'] = st_data[:, 3]
-            st['ri_x'] = st_data[:, 4]
-            st['ri_y'] = st_data[:, 5]
-            st['x_sh'] = st_data[:, 6]
-            st['y_sh'] = st_data[:, 7]
-            st['E'] = st_data[:, 8]
-            st['G'] = st_data[:, 9]
-            st['I_x'] = st_data[:, 10]
-            st['I_y'] = st_data[:, 11]
-            st['K'] = st_data[:, 12]
-            st['k_x'] = st_data[:, 13]
-            st['k_y'] = st_data[:, 14]
-            st['A'] = st_data[:, 15]
-            st['pitch'] = st_data[:, 16]
-            st['x_e'] = st_data[:, 17]
-            st['y_e'] = st_data[:, 18]
-            st_sets.append(st)
-
-        if line.find('#') != -1:
-            if (int(line[1:].split()[0]) == setnum) or setnum == -1:
-                right_set = True
-            else:
-                right_set = False
-        line = fid.readline()
-
-    fid.close()
-    return st_sets
-
-
-def read_hawc2_stKfull_file(filename, setnum=-1):
-    """
-    Reader for a HAWC2 beam structure file. Each sectional input is defined
-    with 6X6 Constitutive Matrix.
-
-    The format of the file should be:
-    main_s[0] dm[1] x_cg[2] y_cg[3] ri_x[4] ri_y[5] x_e[6] y_e[7] pitch[8]
-    K_1,1[9] K_1,2[10]  K_1,3[11] K_1,4[12] K_1,5[13] K_1,6[14]
-             K_2,2[15]  K_2,3[16] K_2,4[17] K_2,5[18] K_2,6[19]
-                        K_3,3[20] K_3,4[21] K_3,5[22] K_3,6[23]
-                                  K_4,4[24] K_4,5[25] K_4,6[26]
-                                            K_5,5[27] K_5,6[28]
-                                                      K_6,6[29]
-
-    First 5 columns are like a standard HAWC2_st input file. The other columns
-    define the upper triangular part of the fully populated constitutive
-    matrix for each section of the blade.
-
-    Sub-classes can overwrite this function to change the reader's behaviour.
     """
     right_set = False
     fid = open(filename, 'r')
@@ -253,42 +199,14 @@ def read_hawc2_stKfull_file(filename, setnum=-1):
     while line:
         if line.find('$') != -1 and right_set:
             ni = int(line.split()[1])
-            st_data = np.zeros((ni, 30))
+            st_data = np.zeros((ni, len(var)))
             for i in range(ni):
                 tmp = fid.readline().split()
-                st_data[i, :] = [float(tmp[j]) for j in range(30)]
+                st_data[i, :] = [float(tmp[j]) for j in range(len(var))]
 
             st = {}
-            st['s'] = st_data[:, 0]
-            st['dm'] = st_data[:, 1]
-            st['x_cg'] = st_data[:, 2]
-            st['y_cg'] = st_data[:, 3]
-            st['ri_x'] = st_data[:, 4]
-            st['ri_y'] = st_data[:, 5]
-            st['pitch'] = st_data[:, 6]
-            st['x_e'] = st_data[:, 7]
-            st['y_e'] = st_data[:, 8]
-            st['K_11'] = st_data[:, 9]
-            st['K_12'] = st_data[:, 10]
-            st['K_13'] = st_data[:, 11]
-            st['K_14'] = st_data[:, 12]
-            st['K_15'] = st_data[:, 13]
-            st['K_16'] = st_data[:, 14]
-            st['K_22'] = st_data[:, 15]
-            st['K_23'] = st_data[:, 16]
-            st['K_24'] = st_data[:, 17]
-            st['K_25'] = st_data[:, 18]
-            st['K_26'] = st_data[:, 19]
-            st['K_33'] = st_data[:, 20]
-            st['K_34'] = st_data[:, 21]
-            st['K_35'] = st_data[:, 22]
-            st['K_36'] = st_data[:, 23]
-            st['K_44'] = st_data[:, 24]
-            st['K_45'] = st_data[:, 25]
-            st['K_46'] = st_data[:, 26]
-            st['K_55'] = st_data[:, 27]
-            st['K_56'] = st_data[:, 28]
-            st['K_66'] = st_data[:, 29]
+            for iv, v in enumerate(var):
+                st[v] = st_data[:, iv]
             st_sets.append(st)
         if line.find('#') != -1:
             if (int(line[1:2]) == setnum) or setnum == -1:

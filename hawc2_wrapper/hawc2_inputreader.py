@@ -1,10 +1,8 @@
 """"""
-from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file, \
-                              read_hawc2_stKfull_file, read_hawc2_pc_file, \
-                              read_hawc2_ae_file
+from hawc2_inputdict import HAWC2InputDict, read_hawc2_st_file,\
+                            read_hawc2_pc_file, read_hawc2_ae_file
 from hawc2_vartrees import HAWC2VarTrees, HAWC2Simulation, HAWC2Wind,\
-                           HAWC2Aero,\
-                           HAWC2AirfoilDataset, HAWC2AirfoilPolar,\
+                           HAWC2Aero, HAWC2AirfoilDataset, HAWC2AirfoilPolar,\
                            HAWC2AeroDrag, HAWC2AeroDragElement, HAWC2MainBody,\
                            HAWC2BeamStructure, HAWC2Type2DLL, HAWC2OutputVT,\
                            HAWC2SBody
@@ -16,19 +14,26 @@ class HAWC2InputReader(object):
     """
     Class to read HAWC2 files and store the data in variables trees.
 
-    parameters
+    Parameters
     ----------
     htc_master_file: str
         Name of the htc file to read.
 
-    returns
+    Creates
     -------
     vartrees: HAWC2VarTrees
-        Variable tree with all the information of the model.
+        Attribute corresponding to the variable tree with all the information
+        of the model.
+
+    Example
+    -------
+    >>> from hawc2_inputreader import HAWC2InputReader
+    >>> reader = HAWC2InputReader('hawc2_master.htc')
+    >>> reader.execute()
+
     """
     def __init__(self, htc_master_file='hawc_master.htc'):
         self.htc_master_file = htc_master_file
-        self.htc = []
         self.vartrees = HAWC2VarTrees()
 
     def execute(self):
@@ -54,12 +59,6 @@ class HAWC2InputReader(object):
                 self._add_dlls(section)
             elif section.name == 'hawcstab2':
                 self._add_hawcstab2(section)
-
-        # count number of blades
-        for iblade in range(1, 10):
-            if 'blade'+str(iblade) not in self.vartrees.body_order:
-                self.vartrees.rotor.nblades = iblade-1
-                break
 
     def set_entry(self, vt, section, name, h2name=None, required=False):
 
@@ -122,20 +121,15 @@ class HAWC2InputReader(object):
 
         blade_ae = read_hawc2_ae_file(self.vartrees.aero.ae_filename)
 
-        self.vartrees.blade_ae.s = blade_ae['s']
-        self.vartrees.blade_ae.chord = blade_ae['chord']
-        self.vartrees.blade_ae.rthick = blade_ae['rthick']
-        self.vartrees.blade_ae.aeset = blade_ae['aeset']
+        for var in ['s', 'chord', 'rthick', 'aeset']:
+            setattr(self.vartrees.blade_ae, var, blade_ae[var])
 
     def _add_simulation(self, section):
 
         vt = HAWC2Simulation()
-        vt = self.set_entry(vt, section, 'time_stop')
-        vt = self.set_entry(vt, section, 'solver_type')
-        vt = self.set_entry(vt, section, 'convergence_limits')
-        vt = self.set_entry(vt, section, 'on_no_convergence')
-        vt = self.set_entry(vt, section, 'max_iterations')
-        vt = self.set_entry(vt, section, 'logfile')
+        for var in vt.var:
+            vt = self.set_entry(vt, section, var)
+
         newmark = section.get_entry('newmark')
         vt.newmark_deltat = newmark.get_entry('deltat')
         vt = self.set_entry(vt, section, 'eig_out')
@@ -182,7 +176,7 @@ class HAWC2InputReader(object):
             vt.iec_gust_type = gust[0]
             vt.G_A = gust[1]
             vt.G_phi0 = gust[2]
-            vt.t0 = gust[3]
+            vt.G_t0 = gust[3]
             vt.G_T = gust[4]
         if vt.turb_format == 1:
             mann = section.get_entry('mann')
@@ -220,20 +214,14 @@ class HAWC2InputReader(object):
     def _add_aero(self, section):
 
         vt = HAWC2Aero()
-        vt = self.set_entry(vt, section, 'nblades')
-        vt = self.set_entry(vt, section, 'induction_method')
-        vt = self.set_entry(vt, section, 'aerocalc_method')
-        vt = self.set_entry(vt, section, 'tiploss_method')
-        vt = self.set_entry(vt, section, 'dynstall_method')
-        vt = self.set_entry(vt, section, 'aerosections')
+        for var in vt.var:
+            vt = self.set_entry(vt, section, var)
+
         aero_dist = section.get_entry('aero_distribution')
         if aero_dist is not None:
             vt.aero_distribution_file = aero_dist[0]
             vt.aero_distribution_set = int(aero_dist[1])
 
-        vt = self.set_entry(vt, section, 'ae_filename')
-        vt = self.set_entry(vt, section, 'pc_filename')
-        vt = self.set_entry(vt, section, 'ae_sets')
         hub_vec = section.get_entry('hub_vec')
         if hub_vec is not None:
             vt.hub_vec_mbdy_name = hub_vec[0]
@@ -257,7 +245,6 @@ class HAWC2InputReader(object):
             dist = entry.get_entry('aerodrag_sections')
             e.dist = dist[0]
             e.calculation_points = int(dist[1])
-            e = self.set_entry(e, entry, 'nsec')
             e = self.set_entry(e, entry, 'sections', h2name='sec')
             vt.elements.append(e)
 
@@ -305,16 +292,18 @@ class HAWC2InputReader(object):
         timo = section.get_entry('timoschenko_input')
         st_type = timo.get_entry('FPM')
         b.body_set = timo.get_entry('set')
+
+        b.st_input_type = 0
         if st_type is not None:
-            stdic = read_hawc2_stKfull_file(timo.get_entry('filename'))
             b.st_input_type = st_type
-        else:
-            stdic = read_hawc2_st_file(timo.get_entry('filename'), b.body_set[0])
-            b.st_input_type = 0
+
+        st = HAWC2BeamStructure(b.st_input_type)
+        stdic = read_hawc2_st_file(timo.get_entry('filename'),
+                                   st.var, b.body_set[0])
         b.body_set[0] = 1
 
         for stset in stdic:
-            st = HAWC2BeamStructure()
+            st = HAWC2BeamStructure(b.st_input_type)
             for k, w in stset.iteritems():
                 setattr(st, k, w)
             b.beam_structure.append(st)
@@ -444,10 +433,10 @@ class HAWC2InputReader(object):
         dll = self.set_entry(dll, sec, 'arraysizes_init', required=True)
         dll = self.set_entry(dll, sec, 'arraysizes_update', required=True)
         dll = self.set_entry(dll, sec, 'deltat')
-
-        init = dll.set_init(dll.name)
+        dll.set_init(dll.name)
         constants = sec.get_entry('init').entries
-        init.set_constants(constants)
+
+        dll.dll_init.set_constants(constants)
 
         io = sec.get_entry('output').entries
         dll.output.set_outputs(io)
@@ -510,15 +499,12 @@ class HAWC2InputReader(object):
 
             elif sec.name == 'degrees_of_freedom':
                 self.vartrees.h2s.commands.append(
-                    'degrees_of_freedom' + 5*' %s' % (
-                    sec.val[0], sec.val[1], sec.val[2], sec.val[3], sec.val[4]))
+                    'degrees_of_freedom' + 5*' %s' % tuple(sec.val[:5]))
 
             elif sec.name == 'steady_state_convergence_limits':
                 self.vartrees.h2s.commands.append(
                     'steady_state_convergence_limits' + 9*' %g'
-                    % (sec.val[0], sec.val[1], sec.val[2], sec.val[3],
-                       sec.val[4], sec.val[5], sec.val[6], sec.val[7],
-                       sec.val[8]))
+                    % tuple(sec.val[:9]))
 
             elif sec.name == 'compute_steady_states':
                 self.vartrees.h2s.commands.append('compute_steady_states')
@@ -558,42 +544,28 @@ class HAWC2InputReader(object):
 
             elif sec.name == 'basic_dtu_we_controller':
                 self.vartrees.h2s.commands.append('basic_dtu_we_controller')
-                self.vartrees.dlls.risoe_controller.dll_init.pgTorque =\
-                    sec.val[0]
-                self.vartrees.dlls.risoe_controller.dll_init.igTorque =\
-                    sec.val[1]
-                self.vartrees.dlls.risoe_controller.dll_init.Qg =\
-                    sec.val[2]
-                self.vartrees.dlls.risoe_controller.dll_init.pgPitch =\
-                    sec.val[3]
-                self.vartrees.dlls.risoe_controller.dll_init.igPitch =\
-                    sec.val[4]
-                self.vartrees.dlls.risoe_controller.dll_init.KK1 =\
-                    sec.val[5]
-                self.vartrees.dlls.risoe_controller.dll_init.KK2 =\
-                    sec.val[6]
-                self.vartrees.dlls.risoe_controller.dll_init.generatorFreq =\
-                    sec.val[7]
-                self.vartrees.dlls.risoe_controller.\
-                    dll_init.generatorDamping = sec.val[8]
-                self.vartrees.dlls.risoe_controller.dll_init.ffFreq =\
-                    sec.val[9]
+                dll_init = self.vartrees.dlls.risoe_controller.dll_init
+                dll_init.pgTorque = sec.val[0]
+                dll_init.igTorque = sec.val[1]
+                dll_init.Qg = sec.val[2]
+                dll_init.pgPitch = sec.val[3]
+                dll_init.igPitch = sec.val[4]
+                dll_init.KK1 = sec.val[5]
+                dll_init.KK2 = sec.val[6]
+                dll_init.generatorFreq = sec.val[7]
+                dll_init.generatorDamping = sec.val[8]
+                dll_init.ffFreq = sec.val[9]
 
                 if sec.val[10] == 1:
-                    self.vartrees.dlls.risoe_controller.\
-                        dll_init.generatorSwitch = 1
+                    dll_init.generatorSwitch = 1
 
                 elif sec.val[10] == 0:
-                    self.vartrees.dlls.risoe_controller.\
-                        dll_init.generatorSwitch = 2
+                    dll_init.generatorSwitch = 2
 
                 if len(sec.val) > 11:
-                    self.vartrees.dlls.risoe_controller.dll_init.Kp2 =\
-                        sec.val[11]
-                    self.vartrees.dlls.risoe_controller.dll_init.Ko1 =\
-                        sec.val[12]
-                    self.vartrees.dlls.risoe_controller.dll_init.Ko2 =\
-                        sec.val[13]
+                    dll_init.Kp2 = sec.val[11]
+                    dll_init.Ko1 = sec.val[12]
+                    dll_init.Ko2 = sec.val[13]
 
             elif sec.name == 'compute_controller_input':
                 self.vartrees.h2s.commands.append('compute_controller_input')

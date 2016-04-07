@@ -19,19 +19,26 @@ class HAWC2SWorkflow(Component):
     ----------
     config: dict
         Configuration dictionary. It has to contain the following entries:
-        |* 'with_structure': bool to add structural properties to the parameters
-        |* 'with_geom': bool to add the blade geometry to the parameters
-        |* 'master_file': str with the name of the master file.
-        |* 'aerodynamic_sections': int of the number of aerodynamic sections.
-        |* 'HAWC2SOutputs': dict of the outputs required. It has to include two
-            dictionaries 'rotor' and 'blade' with the list of rotor sensor and
+
+        * 'with_structure': bool to add structural properties to the parameters
+
+        * 'with_geom': bool to add the blade geometry to the parameters
+
+        * 'master_file': str with the name of the master file.
+
+        * 'aerodynamic_sections': int of the number of aerodynamic sections.
+
+        * 'HAWC2SOutputs': dict of the outputs required. It has to include two\
+            dictionaries 'rotor' and 'blade' with the list of rotor sensor and\
             blade sensors.
 
-        |* 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
+        * 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter\
             parameters.
-        |* 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
-        |* 'HAWC2GeometryBuilder': dict for initialization of
-            HAWC2GeometryBuilder parameters
+
+        * 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
+
+        * 'HAWC2GeometryBuilder': dict for initialization of \
+          HAWC2GeometryBuilder parameters
 
     case_id: str
         Name of the HAWC2s case to create and run. If case_id contains the word
@@ -50,7 +57,7 @@ class HAWC2SWorkflow(Component):
 
     Returns
     -------
-    
+
     """
     def __init__(self, config, case_id, case):
         super(HAWC2SWorkflow, self).__init__()
@@ -68,8 +75,13 @@ class HAWC2SWorkflow(Component):
         self.reader.execute()
 
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
+        self.writer.data_directory = config['HAWC2InputWriter']['data_directory']
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
+        self.writer.vartrees.aero.ae_filename = \
+            os.path.join(self.writer.data_directory, case_id+'_ae.dat')
+        self.writer.vartrees.aero.pc_filename = \
+            os.path.join(self.writer.data_directory, case_id+'_pc.dat')
         self.writer.vartrees.aero.aerosections = config['aerodynamic_sections']
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)
@@ -284,7 +296,9 @@ class OutputsAggregator(Component):
 
     config: dict
         Configuration dictionary. Requires:
+
         * 'aerodynamic_sections'. Number of aerodynamic sections.
+
         * 'HAWC2SOutputs'. Dictionary of the outputs.
 
     n_cases: int
@@ -368,6 +382,7 @@ class HAWC2SAeroElasticSolver(Group):
     -----------
     config: dict
         Configuration dictionary.
+
     """
     def __init__(self, config, cssize=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
@@ -432,6 +447,10 @@ class HAWC2SAeroElasticSolver(Group):
             raise RuntimeError('You need to supply the name of the master' +
                                'file in the configuration dictionary.')
 
+        if 'HAWC2GeometryBuilder' not in config.keys():
+            raise RuntimeError('You need to supply a config dict' +
+                               'for HAWC2GeometryBuilder.')
+
         if 'HAWC2Wrapper' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
                                'for HAWC2Wrapper.')
@@ -481,6 +500,8 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 
+        if 'data_directory' not in config['HAWC2InputWriter'].keys():
+            config['HAWC2InputWriter']['data_directory'] = 'data'
 
 if __name__ == '__main__':
 

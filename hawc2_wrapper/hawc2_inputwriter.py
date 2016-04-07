@@ -32,7 +32,7 @@ def write_pcfile(path, pc):
             fid.write('%i %i %f %s\n' %
                       (j + 1, polar.aoa.shape[0], polar.rthick, polar.desc))
             for k in range(polar.aoa.shape[0]):
-                fid.write((4*'%.17e '+'\n') % (polar.aoa[k], polar.cl[k],
+                fid.write((4*'%23.15e '+'\n') % (polar.aoa[k], polar.cl[k],
                                                polar.cd[k], polar.cm[k]))
     fid.close()
 
@@ -48,20 +48,21 @@ def write_aefile(path, b):
                      b.chord,
                      np.minimum(100., b.rthick),
                      b.aeset]).T
-    np.savetxt(fid, data, fmt="%.17e %.17e %.17e %i")
+    np.savetxt(fid, data, fmt="%23.15e %23.15e %23.15e %i")
     fid.close()
 
 
-def write_stfile(path, body, case_id):
+def write_stfile(body, case_id):
 
     """write the beam structural data to an st_filename"""
+    exp_prec = 15             # exponential precesion
+    col_width = exp_prec + 9  # column width required for exp precision
     if body.st_input_type is 0:
         header = ['r', 'm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'x_sh', 'y_sh',
                   'E', 'G', 'I_x', 'I_y', 'K', 'k_x', 'k_y', 'A', 'pitch',
                   'x_e', 'y_e']
         # for readable files with headers above the actual data column
-        exp_prec = 15             # exponential precesion
-        col_width = exp_prec + 8  # column width required for exp precision
+
         header_full = '='*20*col_width + '\n'
         header_full += ''.join([(hh + ' [%i]').center(col_width + 1) % i
                                for i, hh in enumerate(header)])+'\n'
@@ -74,78 +75,23 @@ def write_stfile(path, body, case_id):
                   'K_35', 'K_36', 'K_44', 'K_45', 'K_46', 'K_55', 'K_56',
                   'K_66']
         # for readable files with headers above the actual data column
-        exp_prec = 15             # exponential precesion
-        col_width = exp_prec + 8  # column width required for exp precision
         header_full = '='*32*col_width + '\n'
         header_full += ''.join([(hh + ' [%i]').center(col_width + 1) % i
                                 for i, hh in enumerate(header)])+'\n'
         header_full += '='*32*col_width + '\n'
 
-    fid = open(path, 'w')
+    fid = open(body.st_filename, 'w')
     fid.write('%i  number of sets, Nset\n' % body.body_set[1])
     fid.write('-----------------\n')
     fid.write('#1 written using the HAWC2 OpenMDAO wrapper\n')
     fid.write('Case ID: %s\n' % case_id)
-    if body.st_input_type is 0:
-        for i, st in enumerate(body.beam_structure):
-            fid.write(header_full)
-            fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
-            data = np.array([st.s,
-                             st.dm,
-                             st.x_cg,
-                             st.y_cg,
-                             st.ri_x,
-                             st.ri_y,
-                             st.x_sh,
-                             st.y_sh,
-                             st.E,
-                             st.G,
-                             st.I_x,
-                             st.I_y,
-                             st.K,
-                             st.k_x,
-                             st.k_y,
-                             st.A,
-                             st.pitch,
-                             st.x_e,
-                             st.y_e]).T
-            np.savetxt(fid, data, fmt='%'+' %i.%ie' % (col_width, exp_prec))
 
-    else:
-        for i, st in enumerate(body.beam_structure):
-            fid.write(header_full)
-            fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
-            data = np.array([st.s,
-                             st.dm,
-                             st.x_cg,
-                             st.y_cg,
-                             st.ri_x,
-                             st.ri_y,
-                             st.pitch,
-                             st.x_e,
-                             st.y_e,
-                             st.K_11,
-                             st.K_12,
-                             st.K_13,
-                             st.K_14,
-                             st.K_15,
-                             st.K_16,
-                             st.K_22,
-                             st.K_23,
-                             st.K_24,
-                             st.K_25,
-                             st.K_26,
-                             st.K_33,
-                             st.K_34,
-                             st.K_35,
-                             st.K_36,
-                             st.K_44,
-                             st.K_45,
-                             st.K_46,
-                             st.K_55,
-                             st.K_56,
-                             st.K_66]).T
-            np.savetxt(fid, data, fmt='%' + ' %i.%ie' % (col_width, exp_prec))
+    for i, st in enumerate(body.beam_structure):
+        fid.write(header_full)
+        fid.write('$%i %i\n' % (i + 1, st.s.shape[0]))
+        data = np.array([getattr(st, var) for var in st.var]).T
+        np.savetxt(fid, data, fmt='%'+' %i.%ie' % (col_width, exp_prec))
+
     fid.close()
 
 
@@ -153,7 +99,7 @@ class HAWC2InputWriter(object):
     """
     Class to write HAWC2 input files.
 
-    parameters
+    Parameters
     ----------
     case_id: str
         Name of the file to write.
@@ -169,9 +115,19 @@ class HAWC2InputWriter(object):
         Name of log files directory.
     control_directory: str
         Name of controller files directory.
-    returns
+
+    Returns
     -------
         nothing
+
+    Example
+    -------
+    
+    >>> from hawc2_inputwriter import HAWC2InputWriter
+    >>> writer = HAWC2InputWriter()
+    >>> writer.case_id = 'new_file'
+    >>> writer.vartrees = reader.vartrees
+    >>> writer.execute()
     """
     def __init__(self, **kwargs):
 
@@ -189,9 +145,6 @@ class HAWC2InputWriter(object):
                 setattr(self, k, w)
             except:
                 pass
-
-        # if not os.path.exists(self.data_directory):
-        #     os.mkdir(self.data_directory)
 
     def execute(self):
 
@@ -237,10 +190,9 @@ class HAWC2InputWriter(object):
                    self.vartrees.sim.solvertype)
         sim.append('convergence_limits %9.2e %9.2e %9.2e' %
                    tuple(self.vartrees.sim.convergence_limits))
-        sim.append('on_no_convergence continue')
+        sim.append('on_no_convergence %s'% self.vartrees.sim.on_no_convergence)
         sim.append('max_iterations %i' % self.vartrees.sim.max_iterations)
-        sim.append('logfile %s' %
-                   (os.path.join(self.log_directory, self.case_id + '.log')))
+        sim.append('logfile %s' % self.vartrees.sim.logfile)
         sim.append('begin newmark')
         sim.append('  deltat    %1.3f' % self.vartrees.sim.newmark_deltat)
         sim.append('end newmark')
@@ -273,12 +225,15 @@ class HAWC2InputWriter(object):
 
         for wind_ramp in wind_vt.wind_ramp_abs:
             wind.append('wind_ramp_abs' + 4*fmt % tuple(wind_ramp))
-        if self.vartrees.wind.scale_time_start > 0:
+
+        if wind_vt.scale_time_start > 0:
             wind.append('scale_time_start' + fmt % wind_vt.scale_time_start)
-        if self.vartrees.wind.wind_ramp_t1 > 0:
+
+        if wind_vt.wind_ramp_t1 > 0 or wind_vt.wind_ramp_t0 > 0 :
             wind.append('wind_ramp_factor' + 4*fmt %
                         (wind_vt.wind_ramp_t0, wind_vt.wind_ramp_t1,
                          wind_vt.wind_ramp_factor0, wind_vt.wind_ramp_factor1))
+
         if wind_vt.iec_gust:
             wind.append('iec_gust %s' % wind_vt.iec_gust_type + 4*fmt %
                         (wind_vt.G_A, wind_vt.G_phi0, wind_vt.G_t0,
@@ -329,9 +284,9 @@ class HAWC2InputWriter(object):
         """ write tower shadow with potential method"""
 
         fmt = ' %12.6e'
+        tower_pot = []
         if hasattr(self.vartrees.wind, 'tower_potential'):
             tp = self.vartrees.wind.tower_potential
-            tower_pot = []
             tower_pot.append('begin tower_shadow_potential_2')
             tower_pot.append('tower_mbdy_link %s' % tp.tower_mbdy_link)
             tower_pot.append('nsec %d' % tp.nsec)
@@ -350,13 +305,11 @@ class HAWC2InputWriter(object):
         aero = []
         aero.append('begin aero')
         aero.append('nblades  %d' % aerovt.nblades)
-        aero.append('hub_vec %s -3' % 'shaft')
-        for link in self.vartrees.aero.links:
+        aero.append('hub_vec shaft %i' % aerovt.hub_vec_coo)
+        for link in aerovt.links:
             aero.append('link %i mbdy_c2_def %s' % (link[0], link[2]))
-        aero.append('ae_filename ./%s/%s_ae.dat' % (self.data_directory,
-                                                    self.case_id))
-        aero.append('pc_filename ./%s/%s_pc.dat' % (self.data_directory,
-                                                    self.case_id))
+        aero.append('ae_filename %s' % aerovt.ae_filename)
+        aero.append('pc_filename %s' % aerovt.pc_filename)
         aero.append('induction_method %i' % aerovt.induction_method)
         aero.append('aerocalc_method  %i' % aerovt.aerocalc_method)
         if aerovt.aero_distribution_file != '':
@@ -388,8 +341,8 @@ class HAWC2InputWriter(object):
                 aerodrag.append('  mbdy_name %s' % e.mbdy_name)
                 aerodrag.append('  aerodrag_sections %s %i' % (
                                      e.dist, e.calculation_points))
-                aerodrag.append('  nsec %d' % e.nsec)
-                for j in range(e.nsec):
+                aerodrag.append('  nsec %d' % len(e.sections))
+                for j in range(len(e.sections)):
                     aerodrag.append('  sec' + 3*fmt % tuple(e.sections[j][:]))
                 aerodrag.append('end aerodrag_element')
             aerodrag.append('end aerodrag')
@@ -439,7 +392,7 @@ class HAWC2InputWriter(object):
     def _write_main_body(self, body_name):
         """ write one main body """
 
-        fmt = ' %12.6e'
+        fmt = ' %23.15e'
         body = self.vartrees.main_bodies.get_main_body(body_name)
         main_body = []
         main_body.append('begin main_body')
@@ -448,12 +401,12 @@ class HAWC2InputWriter(object):
             main_body.append('copy_main_body %s' % body.copy_main_body)
         else:
             main_body.append('name        %s' % body.body_name)
-            main_body.append('type        timoschenko')
+            main_body.append('type        %s' % body.body_type)
             if body.nbodies < body.c12axis.shape[0]:
                 main_body.append('nbodies     %d' % body.nbodies)
             else:
                 main_body.append('nbodies     %d' % (body.c12axis.shape[0]-1))
-            main_body.append('node_distribution     c2_def')
+            main_body.append('node_distribution %s'% body.node_distribution)
 
             if body.damping_type is 'ani':
                 main_body.append('damping_aniso' + 6*fmt %
@@ -467,9 +420,9 @@ class HAWC2InputWriter(object):
                                  tuple(body.concentrated_mass[i]))
             main_body.append('begin timoschenko_input')
             tmpname = ''.join([i for i in body.body_name if not i.isdigit()])
-            main_body.append('  filename %s' %
-                             (os.path.join(self.data_directory, self.case_id +
-                                           '_' + tmpname + '_st.dat')))
+            body.st_filename = (os.path.join(self.data_directory, self.case_id +
+                                           '_' + tmpname + '_st.dat'))
+            main_body.append('  filename %s' % body.st_filename)
             if body.st_input_type is not 0:
                 main_body.append('  FPM %d' % body.st_input_type)
             main_body.append('  set %d %d' % tuple(body.body_set))
@@ -477,7 +430,7 @@ class HAWC2InputWriter(object):
             main_body.append('begin c2_def')
             main_body.append('  nsec %i' % body.c12axis.shape[0])
             for i in range(body.c12axis.shape[0]):
-                main_body.append('  sec %2i' % (i+1) + 4*' %.17e' %
+                main_body.append('  sec %2i' % (i+1) + 4*' %22.15e' %
                                  tuple(body.c12axis[i, :]))
             main_body.append('end c2_def')
             if len(body.beam_structure) > 0:
@@ -497,7 +450,7 @@ class HAWC2InputWriter(object):
 
         orientations = []
         orientations.append('begin orientation')
-        fmt = ' %12.6e'
+        fmt = ' %22.15e'
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
             for orien in body.orientations:
@@ -534,7 +487,7 @@ class HAWC2InputWriter(object):
     def _write_constraints(self):
 
         constraints = []
-        fmt = ' %12.6e'
+        fmt = ' %22.15e'
         constraints.append('begin constraint')
         for name in self.vartrees.body_order:
             body = self.vartrees.main_bodies.get_main_body(name)
@@ -598,7 +551,7 @@ class HAWC2InputWriter(object):
     def _write_dll(self, dll_name):
         """ write general type2 dll"""
 
-        fmt = '%2i  %12.6e'
+        fmt = '%2i %22.15e'
         dll = []
         dll_vt = getattr(self.vartrees.dlls, dll_name)
         dll_init = dll_vt. dll_init
@@ -645,7 +598,7 @@ class HAWC2InputWriter(object):
 
         sns = []
         sns.append('begin output')
-        sns.append('  filename %s' % (os.path.join(self.res_directory,
+        sns.append('  filename %s' % (os.path.join(self.vartrees.output.res_dir,
                                                    self.case_id)))
         sns.append('  time %3.6f %3.6f' % (self.vartrees.output.time_start,
                                            self.vartrees.sim.time_stop))
@@ -662,68 +615,38 @@ class HAWC2InputWriter(object):
 
     def _write_aefile(self):
 
-        path = os.path.join(self.data_directory, self.case_id + '_ae.dat')
-        write_aefile(path, self.vartrees.blade_ae)
+        write_aefile(self.vartrees.aero.ae_filename, self.vartrees.blade_ae)
 
     def _write_stfile(self, body):
 
-        tmpname = ''.join([i for i in body.body_name if not i.isdigit()])
-        path = os.path.join(self.data_directory,
-                            self.case_id + '_' + tmpname + '_st.dat')
-        write_stfile(path, body, self.case_id)
+        write_stfile(body, self.case_id)
 
     def _write_pcfile(self):
 
-        path = os.path.join(self.data_directory, self.case_id + '_pc.dat')
-        write_pcfile(path, self.vartrees.airfoildata)
-
-
-class HAWC2AeroInputWriter(HAWC2InputWriter):
-    """
-    HAWC2InputWriter-type class to write HAWC2aero files.
-
-    parameters
-    ----------
-        same as for HAWC2InputWriter
-
-    returns
-    -------
-        nothing
-    """
-    def __init__(self):
-        super(HAWC2AeroInputWriter, self).__init__()
-
-    def execute(self):
-
-        self.htc_master = []
-
-        if not os.path.exists(self.data_directory):
-            os.mkdir('data')
-        self.case_idout = self.case_id
-
-        self._write_all()
-        self._write_master()
-        self._write_pcfile()
-        self._write_aefile()
-
-    def _write_all(self):
-
-        self._write_aero()
-        self._write_wind()
-        self._write_output()
+        write_pcfile(self.vartrees.aero.pc_filename, self.vartrees.airfoildata)
 
 
 class HAWC2SInputWriter(HAWC2InputWriter):
     """
     HAWC2InputWriter-type class to write HAWC2s files.
 
-    parameters
+    Parameters
     ----------
         same as for HAWC2InputWriter
 
-    returns
+    Returns
     -------
         nothing
+
+    Example
+    -------
+    
+    >>> from hawc2_inputwriter import HAWC2SInputWriter
+    >>> writer = HAWC2SInputWriter()
+    >>> writer.case_id = 'new_file'
+    >>> writer.vartrees = reader.vartrees
+    >>> writer.execute()
+
     """
     def __init__(self, **kwargs):
         super(HAWC2SInputWriter, self).__init__()
