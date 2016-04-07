@@ -44,7 +44,7 @@ config['with_tsr'] = False
 config['with_structure'] = False
 config['with_geom'] = False
 config['aerodynamic_sections'] = 50
-root.add('loads', HAWC2AeroElasticSolver(config, './DLCs/', None, None), promotes=['*'])
+root.add('loads', HAWC2AeroElasticSolver(config, './DLCs_longer/', None, None), promotes=['*'])
 
 
 top.setup()

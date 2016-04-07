@@ -185,9 +185,9 @@ The classes can be used as follow::
 Geometry Builder
 ----------------
 This module contains the class ``HAWC2GeometryBuilder`` and depends on the library PGL_.
-The class can be used mainly for two applications:
+The class has mainly two functionalities:
     * interpolate the initialized c2def values to change the spanwise discretization;
-    * define the c2def from the variable tree BladeGeometryVT()
+    * define the c2def from the variable tree ``BladeGeometryVT()``.
     
 .. _PGL: https://gitlab.windenergy.dtu.dk/frza/PGL 
 
@@ -197,4 +197,44 @@ The modules ``hawc2_aeroelasticsolver`` and ``hawc2s_aeroelasticsolver`` impleme
 
 The modules contain a ``Group`` class (from OpenMDAO) each, called ``HAWC2AeroElasticSolver`` and ``HAWC2sAeroElasticSolver``. These classes execute the workflow with a ``ParallelGroup``. 
 Each of the module also include a class ``Component`` called ``OutputAggregator`` that groups the outputs from the parallel computation into single arrays.
+
+The classes require at initialization a dictionary as input that defines the main parameters of the problem to be executed. The dictionary is a dictionary of a dictionary where the higher level are dictionaries for each of the functions described in this manual.
+
+Examples on how to execute the classes can be found below::
+
+    >>> from openmdao.core.mpi_wrap import MPI
+    >>> from openmdao.api import Problem, Group
+    >>> from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
+    >>> if MPI:
+    >>>    from openmdao.core.petsc_impl import PetscImpl as impl
+    >>> else:
+    >>>    from openmdao.core.basic_impl import BasicImpl as impl
+    >>> from hawc2_wrapper.hawc2_aeroelasticsolver import HAWC2AeroElasticSolver
+    >>> top = Problem(impl=impl, root=Group())
+    >>> root = top.root
+    >>> root.ln_solver = LinearGaussSeidel()
+    >>> config = {}
+    >>> cf = {}
+    >>> cf['blade_ni_span'] = 27
+    >>> cf['interp_from_htc'] = True
+    >>> cf['hub_radius'] = 3.
+    >>> config['HAWC2GeometryBuilder'] = cf
+    >>> cf = {}
+    >>> cf['dry_run'] = False
+    >>> cf['copyback_results'] = False
+    >>> cf['hawc2bin'] = 'HAWC2mb.exe'
+    >>> config['HAWC2Wrapper'] = cf
+    >>> cf = {}
+    >>> cf['channels'] = ['local-blade1-node-013-momentvec-z']
+    >>> config['HAWC2Outputs'] = cf
+    >>> cf = {}
+    >>> config['HAWC2InputWriter'] = cf
+    >>> config['master_file'] = 'main_h2.htc'
+    >>> config['with_tsr'] = False
+    >>> config['with_structure'] = False
+    >>> config['with_geom'] = False
+    >>> config['aerodynamic_sections'] = 50
+    >>> root.add('loads', HAWC2AeroElasticSolver(config, './DLCs/', None, None), promotes=['*'])
+    >>> top.setup()
+    >>> top.run()
 
