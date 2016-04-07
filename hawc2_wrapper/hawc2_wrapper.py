@@ -55,7 +55,7 @@ class HAWC2Wrapper(object):
     >>> executer.hawc2bin = 'HAWC2s.exe'
     >>> executer.case_id = 'new_file_h2s'
     >>> executer.execute()
-    
+
     """
 
     def __init__(self, **kwargs):
@@ -73,6 +73,8 @@ class HAWC2Wrapper(object):
         self.copyback_results = True
         self.copyback_results_dir = 'res_copy'
 
+        self.verbose = True
+
         self.dry_run = False
         self.timeout = 600
 
@@ -86,7 +88,7 @@ class HAWC2Wrapper(object):
 
     def compute(self):
 
-        print 'executing %s for case:  %s.' % (self.hawc2bin, self.case_id)
+        if self.verbose: print 'executing %s for case:  %s.' % (self.hawc2bin, self.case_id)
 
         tt = time.time()
 
@@ -108,8 +110,8 @@ class HAWC2Wrapper(object):
                 else:
                     proc = subprocess.check_output(exec_str)
                 self.success = True
-                print self.hawc2bin, 'output:'
-                print proc
+                if self.verbose: print self.hawc2bin, 'output:'
+                if self.verbose: print proc
             except:
                 self.success = False
                 print self.hawc2bin, ' crashed for case %s' % self.case_id
@@ -126,7 +128,7 @@ class HAWC2Wrapper(object):
         if self.copyback_results:
             self.copy_results()
 
-        print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id,
+        if self.verbose: print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id,
                                                                 time.time()-tt)
 
     def copy_results(self):

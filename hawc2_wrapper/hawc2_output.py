@@ -64,7 +64,6 @@ class HAWC2OutputBase(object):
 
     def execute(self, case_tags):
 
-        print 'reading outputs for case %s ...' % case_tags['[case_id]']
         case_tags['[run_dir]'] = ''
         case = Simulations.Cases(case_tags)
         case.load_result_file(case_tags)
