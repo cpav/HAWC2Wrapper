@@ -239,8 +239,7 @@ class HAWC2AeroElasticSolver(Group):
         self._check_config(config)
 
         # load cases and their tags
-        dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext='xls')
-
+        dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext='xls', silent=True)
 
         promote = []
         if config['with_tsr']:

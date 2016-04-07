@@ -30,6 +30,7 @@ cf = {}
 cf['dry_run'] = False
 cf['copyback_results'] = False
 cf['hawc2bin'] = 'HAWC2mb.exe'
+cf['verbose'] = False
 config['HAWC2Wrapper'] = cf
 
 cf = {}
