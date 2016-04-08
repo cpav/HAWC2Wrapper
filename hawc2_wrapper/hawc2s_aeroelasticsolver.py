@@ -75,7 +75,7 @@ class HAWC2SWorkflow(Component):
         self.reader.execute()
 
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
-        self.writer.data_directory = config['HAWC2InputWriter']['data_directory']
+        self.writer.data_directory = config['HAWC2SInputWriter']['data_directory']
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
         self.writer.vartrees.aero.ae_filename = \
@@ -111,7 +111,7 @@ class HAWC2SWorkflow(Component):
                 cssize = (config['structural_sections'], 19)
             self.add_param('blade_beam_structure', shape=cssize)
 
-        self.geom = HAWC2GeometryBuilder(blade_ni_span=config['structural_sections'])
+        self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
         self.geom.c12axis_init[:, :3] /= self.geom.c12axis_init[-1, 2]
         if self.with_geom:
@@ -158,8 +158,7 @@ class HAWC2SWorkflow(Component):
 
         if self.with_structure:
             body = vt.main_bodies.blade1
-            self._array2hawc2beamstructure(blade_length, body,
-                                           params['blade_beam_structure'])
+            body.array2hawc2beamstructure(blade_length, params['blade_beam_structure'])
 
         if self.with_ctr_tuning:
             pass
@@ -184,63 +183,6 @@ class HAWC2SWorkflow(Component):
         except:
             pass
         os.chdir(self.basedir)
-        # if not self.keep_work_dirs:
-        #     shutil.rmtree(workdir)
-
-    def _array2hawc2beamstructure(self, blade_length, body, body_st):
-
-        bset = body.body_set[1] - 1
-        if body.st_input_type is 0:
-            body.beam_structure[bset].s = body_st[:, 0]
-            body.beam_structure[bset].dm = body_st[:, 1]
-            body.beam_structure[bset].x_cg = body_st[:, 2]
-            body.beam_structure[bset].y_cg = body_st[:, 3]
-            body.beam_structure[bset].ri_x = body_st[:, 4]
-            body.beam_structure[bset].ri_y = body_st[:, 5]
-            body.beam_structure[bset].x_sh = body_st[:, 6]
-            body.beam_structure[bset].y_sh = body_st[:, 7]
-            body.beam_structure[bset].E = body_st[:, 8]
-            body.beam_structure[bset].G = body_st[:, 9]
-            body.beam_structure[bset].I_x = body_st[:, 10]
-            body.beam_structure[bset].I_y = body_st[:, 11]
-            body.beam_structure[bset].K = body_st[:, 12]
-            body.beam_structure[bset].k_x = body_st[:, 13]
-            body.beam_structure[bset].k_y = body_st[:, 14]
-            body.beam_structure[bset].A = body_st[:, 15]
-            body.beam_structure[bset].pitch = body_st[:, 16]
-            body.beam_structure[bset].x_e = body_st[:, 17]
-            body.beam_structure[bset].y_e = body_st[:, 18]
-        else:
-            body.beam_structure[bset].s = body_st[:, 0]
-            body.beam_structure[bset].dm = body_st[:, 1]
-            body.beam_structure[bset].x_cg = body_st[:, 2]
-            body.beam_structure[bset].y_cg = body_st[:, 3]
-            body.beam_structure[bset].ri_x = body_st[:, 4]
-            body.beam_structure[bset].ri_y = body_st[:, 5]
-            body.beam_structure[bset].pitch = body_st[:, 6]
-            body.beam_structure[bset].x_e = body_st[:, 7]
-            body.beam_structure[bset].y_e = body_st[:, 8]
-            body.beam_structure[bset].K_11 = body_st[:, 9]
-            body.beam_structure[bset].K_12 = body_st[:, 10]
-            body.beam_structure[bset].K_13 = body_st[:, 11]
-            body.beam_structure[bset].K_14 = body_st[:, 12]
-            body.beam_structure[bset].K_15 = body_st[:, 13]
-            body.beam_structure[bset].K_16 = body_st[:, 14]
-            body.beam_structure[bset].K_22 = body_st[:, 15]
-            body.beam_structure[bset].K_23 = body_st[:, 16]
-            body.beam_structure[bset].K_24 = body_st[:, 17]
-            body.beam_structure[bset].K_25 = body_st[:, 18]
-            body.beam_structure[bset].K_26 = body_st[:, 19]
-            body.beam_structure[bset].K_33 = body_st[:, 20]
-            body.beam_structure[bset].K_34 = body_st[:, 21]
-            body.beam_structure[bset].K_35 = body_st[:, 22]
-            body.beam_structure[bset].K_36 = body_st[:, 23]
-            body.beam_structure[bset].K_44 = body_st[:, 24]
-            body.beam_structure[bset].K_45 = body_st[:, 25]
-            body.beam_structure[bset].K_46 = body_st[:, 26]
-            body.beam_structure[bset].K_55 = body_st[:, 27]
-            body.beam_structure[bset].K_56 = body_st[:, 28]
-            body.beam_structure[bset].K_66 = body_st[:, 29]
 
     def _check_cases(self, vt, case_id, case):
 
@@ -404,6 +346,9 @@ class HAWC2SAeroElasticSolver(Group):
             name = 'wsp_%2.2f' % ws
             cases[name.replace('.', '_')] = ws
             cases_list.append(name.replace('.', '_'))
+
+        if not isinstance(config['cases']['user'], list):
+            print "Error! config['cases']['user'] has to be a list of dictionaries"
         for icase, case in enumerate(config['cases']['user']):
             name = 'user_%i' % icase
             cases[name] = case
@@ -500,8 +445,8 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 
-        if 'data_directory' not in config['HAWC2InputWriter'].keys():
-            config['HAWC2InputWriter']['data_directory'] = 'data'
+        if 'data_directory' not in config['HAWC2SInputWriter'].keys():
+            config['HAWC2SInputWriter']['data_directory'] = 'data'
 
 if __name__ == '__main__':
 
