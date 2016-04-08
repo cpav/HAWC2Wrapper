@@ -150,7 +150,7 @@ class HAWC2Wrapper(object):
             try:
                 shutil.copy(filename, results_dir)
             except:
-                print 'failed copying back file "%s" into %s' %\
+                if self.verbose: print 'failed copying back file "%s" into %s' %\
                                      (filename, results_dir)
 
         # copy data directory in folder

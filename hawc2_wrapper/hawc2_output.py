@@ -305,8 +305,6 @@ class HAWC2SOutputBase(object):
                 else:
                     # fixme
                     self.blade_fext_loads_data.append(np.zeros((30, 34)))
-            else:
-                print 'Command "%s" not known.' % name
 
 
 class HAWC2SOutput(HAWC2SOutputBase):
