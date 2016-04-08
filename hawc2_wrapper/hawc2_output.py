@@ -286,6 +286,28 @@ class HAWC2SOutputBase(object):
                 else:
                     self.blade_loads_data.append(np.zeros((30, 34)))
 
+                # read fext files
+                self.blade_fext_loads_data = []
+                wsp_array = []
+                wsp_files = glob.glob(self.case_id+'_fext_u*.ind')
+                if len(wsp_files) > 0:
+                    for f in wsp_files:
+                        w = float(re.sub('%s' % self.case_id + '_fext_u',
+                                         '', f).strip('.ind'))/1000.
+                        wsp_array.append(w)
+                    wsp_array.sort()
+
+                    for wsp in wsp_array:
+                        filename = self.case_id + '_fext_u' + \
+                                   str(int(wsp*1000)) + '.ind'
+                        data = np.loadtxt(filename)
+                        self.blade_fext_loads_data.append(data)
+                else:
+                    # fixme
+                    self.blade_fext_loads_data.append(np.zeros((30, 34)))
+            else:
+                print 'Command "%s" not known.' % name
+
 
 class HAWC2SOutput(HAWC2SOutputBase):
     """
