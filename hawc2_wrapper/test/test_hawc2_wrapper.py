@@ -4,7 +4,7 @@ import unittest
 from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
 from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
 from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
-from hawc2_wrapper.hawc2_output import HAWC2OutputBase, HAWC2SOutputBase
+from hawc2_wrapper.hawc2_output import HAWC2OutputBase, HAWC2SOutputBase, FreqDampTarget
 
 from wetb.prepost import dlcdefs
 
@@ -415,6 +415,21 @@ class Test(unittest.TestCase):
         output.case_id = wrapper.case_id
         output.commands = writer.vartrees.h2s.commands
         output.execute()
+
+        freq = FreqDampTarget()
+
+        freq.freqdamp = output.aeroelasticfreqdamp
+
+        freq.mode_freq = np.array([[15., 0.25, 0.64],
+                                   [20., 0.25, 0.64]])
+        freq.mode_damp = np.array([[15., 0.8, 80.],
+                                   [20., 0.8, 80.]])
+
+        freq.mode_target_freq = np.array([[15., 0.3, -1],
+                                          [20., 0.25, 0.6]])
+        freq.mode_target_damp = np.array([[15., -1,  85.],
+                                          [20., 0.4, 80.]])
+        freq.execute()
 
         opt_ref = [[5.0, 0.1856139007801657E+01, 5.997000000000000],
                    [6.0, 0.7679248486373157E+00, 5.997000000000000],

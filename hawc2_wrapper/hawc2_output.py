@@ -168,7 +168,7 @@ class HAWC2SOutputBase(object):
     >>> output.case_id = wrapper.case_id
     >>> output.commands = writer.vartrees.h2s.commands
     >>> output.execute()
-        
+
     """
     def __init__(self):
         self.case_id = ''
@@ -613,7 +613,7 @@ class FreqDampTarget(object):
 
     mode_damp: array
         Two dimenstional array containing the target values of the dampings at
-        operational points. Has to be of the same size as mode_freq.
+        operational points. It has to be of the same size as mode_freq.
 
     Returns
     -------
@@ -624,12 +624,18 @@ class FreqDampTarget(object):
     -------
 
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.freqdamp = np.array([0.])
         self.mode_freq = np.array([0.])
         self.mode_damp = np.array([0.])
         self.mode_target_freq = np.array([0.])
         self.mode_target_damp = np.array([0.])
+
+        for k, w in kwargs.iteritems():
+            try:
+                setattr(self, k, w)
+            except:
+                pass
 
     def mode_tracking_freq_damp(self):
         """
@@ -666,41 +672,48 @@ class FreqDampTarget(object):
                               'and dampings and reference values for ' +\
                               'tracking is high! %f' % err[err.argmin()]
 
-                    self.mode_index[iop, im] = err.argmin() + 1
+                    self.mode_index[iop, im] = int(err.argmin() + 1)
 
     def freq_damp_target_index(self):
         """
         Execute the computation of the objective function for frequency and
         dampings placement.
         """
-        freq_factor = []
-        Nmodes = (self.freqdamp.shape[1]-1)/2
+
+        freq_factor = np.zeros([self.mode_index.shape[0], (self.mode_index.shape[1]-1)*2])
+
+        Nmodes = int((self.freqdamp.shape[1]-1)/2)
         # for loop along the different operational points
         for freqdamp in self.freqdamp:
-            for mode_index, mode_target_freq, mode_target_damp in \
-                    zip(self.mode_index, self.mode_target_freq,
-                        self.mode_target_damp):
+            for iop, (mode_index, mode_target_freq, mode_target_damp) in \
+                    enumerate(zip(self.mode_index, self.mode_target_freq,
+                        self.mode_target_damp)):
                 if freqdamp[0] == mode_index[0]:
                     # for loop along the different target modes
-                    for index, target_freq, target_damp in \
-                            zip(mode_index[1:], mode_target_freq[1:],
-                                mode_target_damp[1:]):
+                    for im, (index, target_freq, target_damp) in \
+                            enumerate(zip(mode_index[1:], mode_target_freq[1:],
+                                mode_target_damp[1:])):
 
                         if target_freq != -1:
-                            freq_factor.append(abs(freqdamp[index] /
-                                                   target_freq - 1))
+                            freq_factor[iop, im] = abs(freqdamp[index] /
+                                                          target_freq - 1)
                             print 'Freq: ', freqdamp[index],\
                                   'Target Freq: ', target_freq,\
-                                  'Diff.:', freq_factor[-1]
+                                  'Diff.:', freq_factor[iop, im]
                         if target_damp != -1:
-                            freq_factor.append(abs(freqdamp[index+Nmodes] /
-                                                   target_damp - 1))
+                            freq_factor[iop, im+len(mode_index[1:])] = \
+                                abs(freqdamp[index+Nmodes] / target_damp - 1)
                             print 'Damp: ', freqdamp[index+Nmodes],\
                                   'Target Damp:', target_damp,\
-                                  'Diff.:', freq_factor[-1]
-        self.freq_factor = np.array(freq_factor)
+                                  'Diff.:', freq_factor[iop, im+len(mode_index[1:])]
+        self.freq_factor = freq_factor
 
     def execute(self):
 
         self.mode_tracking_freq_damp()
         self.freq_damp_target_index()
+
+
+if __name__ == '__main__':
+
+    pass

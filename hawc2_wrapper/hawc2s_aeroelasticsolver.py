@@ -8,7 +8,7 @@ from openmdao.api import Component, Group, ParallelGroup
 from hawc2_inputreader import HAWC2InputReader
 from hawc2_inputwriter import HAWC2SInputWriter
 from hawc2_wrapper import HAWC2Wrapper
-from hawc2_output import HAWC2SOutputCompact
+from hawc2_output import HAWC2SOutputCompact, FreqDampTarget
 from hawc2_geometry import HAWC2GeometryBuilder
 
 
@@ -123,6 +123,10 @@ class HAWC2SWorkflow(Component):
             self.geom.interp_from_htc = False
         else:
             self.geom.interp_from_htc = True
+
+        if self.with_freq_placement:
+            self.freq = FreqDampTarget(config['FreqDampTarget'])
+            self.add_output('freq_factor', )
 
     def solve_nonlinear(self, params, unknowns, resids):
 
