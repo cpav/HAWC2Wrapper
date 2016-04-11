@@ -417,9 +417,7 @@ class Test(unittest.TestCase):
         output.execute()
 
         freq = FreqDampTarget()
-
         freq.freqdamp = output.aeroelasticfreqdamp
-
         freq.mode_freq = np.array([[15., 0.25, 0.64],
                                    [20., 0.25, 0.64]])
         freq.mode_damp = np.array([[15., 0.8, 80.],

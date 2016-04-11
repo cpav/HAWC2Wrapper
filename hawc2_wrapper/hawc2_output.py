@@ -674,17 +674,18 @@ class FreqDampTarget(object):
 
                     self.mode_index[iop, im] = int(err.argmin() + 1)
 
-    def freq_damp_target_index(self):
+    def freq_damp_target_index(self, verbose=False):
         """
         Execute the computation of the objective function for frequency and
         dampings placement.
         """
 
-        freq_factor = np.zeros([self.mode_index.shape[0], (self.mode_index.shape[1]-1)*2])
+        freq_factor = np.zeros([self.freqdamp.shape[0],
+                                (self.mode_index.shape[1]-1)*2])
 
         Nmodes = int((self.freqdamp.shape[1]-1)/2)
         # for loop along the different operational points
-        for freqdamp in self.freqdamp:
+        for i, freqdamp in enumerate(self.freqdamp):
             for iop, (mode_index, mode_target_freq, mode_target_damp) in \
                     enumerate(zip(self.mode_index, self.mode_target_freq,
                         self.mode_target_damp)):
@@ -695,17 +696,19 @@ class FreqDampTarget(object):
                                 mode_target_damp[1:])):
 
                         if target_freq != -1:
-                            freq_factor[iop, im] = abs(freqdamp[index] /
+                            freq_factor[i, im] = abs(freqdamp[index] /
                                                           target_freq - 1)
-                            print 'Freq: ', freqdamp[index],\
-                                  'Target Freq: ', target_freq,\
-                                  'Diff.:', freq_factor[iop, im]
+                            if verbose:
+                                print 'Freq: ', freqdamp[index],\
+                                      'Target Freq: ', target_freq,\
+                                      'Diff.:', freq_factor[i, im]
                         if target_damp != -1:
-                            freq_factor[iop, im+len(mode_index[1:])] = \
+                            freq_factor[i, im+len(mode_index[1:])] = \
                                 abs(freqdamp[index+Nmodes] / target_damp - 1)
-                            print 'Damp: ', freqdamp[index+Nmodes],\
-                                  'Target Damp:', target_damp,\
-                                  'Diff.:', freq_factor[iop, im+len(mode_index[1:])]
+                            if verbose:
+                                print 'Damp: ', freqdamp[index+Nmodes],\
+                                      'Target Damp:', target_damp,\
+                                      'Diff.:', freq_factor[i, im+len(mode_index[1:])]
         self.freq_factor = freq_factor
 
     def execute(self):

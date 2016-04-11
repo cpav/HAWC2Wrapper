@@ -69,7 +69,10 @@ class HAWC2SWorkflow(Component):
         self.with_geom = config['with_geom']
         self.with_tsr = config['with_tsr']
         self.with_ctr_tuning = 0
-        self.with_freq_placement = 0
+        if 'FreqDampTarget' in config.keys():
+            self.with_freq_placement = True
+        else:
+            self.with_freq_placement = False
 
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
@@ -125,8 +128,10 @@ class HAWC2SWorkflow(Component):
             self.geom.interp_from_htc = True
 
         if self.with_freq_placement:
-            self.freq = FreqDampTarget(config['FreqDampTarget'])
-            self.add_output('freq_factor', )
+            freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
+
+            self.freq = FreqDampTarget(**config['FreqDampTarget'])
+            self.add_output('freq_factor', shape=[nws, 2*freq_nf])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -166,8 +171,7 @@ class HAWC2SWorkflow(Component):
 
         if self.with_ctr_tuning:
             pass
-        if self.with_freq_placement:
-            pass
+
 
         self.writer.execute()
         self.wrapper.compute()
@@ -186,6 +190,12 @@ class HAWC2SWorkflow(Component):
             unknowns['outputs_blade_fext'] = self.output.outputs_blade_fext
         except:
             pass
+
+        if self.with_freq_placement:
+            self.freq.freqdamp = self.output.aeroelasticfreqdamp
+            self.freq.execute()
+            unknowns['freq_factor'] = self.freq.freq_factor
+
         os.chdir(self.basedir)
 
     def _check_cases(self, vt, case_id, case):
@@ -292,6 +302,22 @@ class OutputsAggregator(Component):
                 self.sensor_fext_blade.append(sensor)
                 self.add_output(sensor, shape=[n_cases, self.nsts])
 
+        if 'FreqDampTarget' in config.keys():
+            self.with_freq_placement = True
+        else:
+            self.with_freq_placement = False
+
+        if self.with_freq_placement:
+
+            freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
+
+            for i in range(n_cases):
+                p_name = 'freq_factor_%d' % i
+                self.add_param(p_name, shape=[1, 2*freq_nf])
+
+            self.add_output('freq_factor', shape=[n_cases, 2*freq_nf])
+
+
     def solve_nonlinear(self, params, unknowns, resids):
 
         for j, sensor in enumerate(self.sensor_rotor):
@@ -309,6 +335,11 @@ class OutputsAggregator(Component):
                 p_name = 'outputs_blade_fext_%d' % i
                 out = params[p_name]
                 unknowns[sensor][i, :] = out[0, j*self.nsts:(j+1)*self.nsts]
+
+        if self.with_freq_placement:
+            for i in range(self.n_cases):
+                p_name = 'freq_factor_%d' % i
+                unknowns['freq_factor'][i, :] = params[p_name][0, :]
 
         fid = open('Rotor_loads.dat', 'w')
         fmt = '#'+'%23s '+(len(self.sensor_rotor)-1)*'%24s '+'\n'
@@ -389,7 +420,8 @@ class HAWC2SAeroElasticSolver(Group):
                          'aggregate.outputs_blade_%d' % i)
             self.connect('pg.%s.outputs_blade_fext' % case_id,
                          'aggregate.outputs_blade_fext_%d' % i)
-
+            self.connect('pg.%s.freq_factor' % case_id,
+                         'aggregate.freq_factor_%d' % i)
     def _check_config(self, config):
 
         if 'master_file' not in config.keys():
