@@ -407,6 +407,8 @@ class HAWC2SAeroElasticSolver(Group):
         promotions = config['HAWC2SOutputs']['blade'] + config['HAWC2SOutputs']['rotor']
         if config['with_sectional_forces']:
             promotions += ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']
+        if 'FreqDampTarget' in config.keys():
+            promotions += ['freq_factor']
         self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
