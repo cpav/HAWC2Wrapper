@@ -177,6 +177,7 @@ class HAWC2SOutputBase(object):
         self.aeroelasticfreqdamp = np.array([0.])
         self.aeroservoelasticfreqdamp = np.array([0.])
         self.controller_data = DTUBasicControllerVT()
+        self.cl_matrices = []
 
     def execute(self):
 
@@ -306,6 +307,27 @@ class HAWC2SOutputBase(object):
                     # fixme
                     self.blade_fext_loads_data.append(np.zeros((30, 34)))
 
+            elif name == 'save_cl_matrices_all':
+                wsp_files = glob.glob(self.case_id+'_amat_ase_ops_*.dat')
+                nwsp = len(wsp_files)
+
+                for iws in range(1,nwsp+1):
+                    name_file = self.case_id+'_amat_ase_ops_%i.dat' % iws
+                    Aase = np.matrix(np.loadtxt(name_file))
+
+                    #name_file = self.case_id+'_bvmat_ase_ops_%i.dat' % iws
+                    #Bvase = np.loadtxt(name_file)
+
+                    name_file = self.case_id+'_bvmat_loc_v_ase_ops_%i.dat' % iws
+                    Bvlocase = np.matrix(np.loadtxt(name_file))
+
+                    name_file = self.case_id+'_emat_ase_ops_%i.dat' % iws
+                    Case = np.matrix(np.loadtxt(name_file))
+
+                    #name_file = self.case_id+'_fmat_ase_ops_%i.dat' % iws
+                    Dase = np.matrix(np.zeros([Case.shape[0], Bvlocase.shape[1]]))
+
+                    self.cl_matrices.append([Aase, Bvlocase, Case, Dase])
 
 class HAWC2SOutput(HAWC2SOutputBase):
     """
