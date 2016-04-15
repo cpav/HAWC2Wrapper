@@ -76,7 +76,7 @@ class HAWC2Wrapper(object):
         self.verbose = True
 
         self.dry_run = False
-        self.timeout = 800
+        self.timeout = 1000
 
         self.basedir = os.getcwd()
 

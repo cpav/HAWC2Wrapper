@@ -329,6 +329,29 @@ class HAWC2SOutputBase(object):
 
                     self.cl_matrices.append([Aase, Bvlocase, Case, Dase])
 
+    def compute_fatigue(self, config):
+
+        from fatfreq import fatfreq
+        import pickle
+
+        Wind = pickle.load(open( config['FatFreq']['windfilename'], "rb" ) )
+
+        WindWind = np.array([w.V for w in Wind])
+
+        indeces = []
+        for ws in self.operational_data[:, 0]:
+            diff = abs(WindWind/ws-1.)
+            indeces.append(diff.index(min(diff)))
+
+        Wind = [Wind[i] for i in indeces]
+        omega = self.operational_data[:, 2]
+        Damage, StdDev = fatfreq.FatigueFromPSD(omega, Wind,
+                                                config['FatFreq']['Sensor'],
+                                                self.cl_matrices,
+                                                config['FatFreq']['m'],
+                                                mass_mom=0., PSD_out=False)
+
+
 class HAWC2SOutput(HAWC2SOutputBase):
     """
     HAWC2SOutput: HAWC2SOutputBase class that organize results in more general
