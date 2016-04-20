@@ -428,15 +428,11 @@ class HAWC2SAeroElasticSolver(Group):
 
         if 'master_file' not in config.keys():
             raise RuntimeError('You need to supply the name of the master' +
-                               'file in the configuration dictionary.')
-
-        if 'HAWC2GeometryBuilder' not in config.keys():
-            raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2GeometryBuilder.')
+                               ' file in the configuration dictionary.')
 
         if 'HAWC2Wrapper' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2Wrapper.')
+                               ' for HAWC2Wrapper.')
 
         if 'aerodynamic_sections' not in config.keys():
             raise RuntimeError('You need to supply the aerodynamic_sections' +
@@ -448,23 +444,23 @@ class HAWC2SAeroElasticSolver(Group):
 
         if 'with_tsr' not in config.keys():
             config['with_tsr'] = False
-            print 'Tip-speed-ratio is not added as parameter because' +\
+            print 'Tip-speed-ratio is not added as parameter because ' +\
                   ' the option "with_tsr" was not provided in the configuration.'
 
         if 'with_structure' not in config.keys():
             config['with_structure'] = False
-            print 'Structural properties are not set as parameters because' +\
+            print 'Structural properties are not set as parameters because ' +\
                   ' no option "with_structure" was given in the configuration.'
 
         if 'with_sectional_forces' not in config.keys():
             config['with_sectional_forces'] = False
             print 'config parameter "with_sectional_forces" not set' +\
-                  'set to True to output sectional forces (fext files)'
+                  ' set to True to output sectional forces (fext files)'
 
         if 'hawc2_FPM' not in config.keys():
             config['hawc2_FPM'] = False
-            print 'hawc2_FPM not supplied: structural properties assumed to be ' +\
-                  'in standard HAWC2 format.'
+            print 'hawc2_FPM not supplied: structural properties assumed to be' +\
+                  ' in standard HAWC2 format.'
 
         if 'with_geom' not in config.keys():
             config['with_geom'] = False
@@ -474,7 +470,7 @@ class HAWC2SAeroElasticSolver(Group):
         if 'HAWC2SInputWriter' not in config.keys():
             config['HAWC2SInputWriter'] = {}
             print 'No configuration dictionary given for HAWC2SInputWriter' +\
-                  'proceeding with default values.'
+                  ' proceeding with default values.'
 
         if 'HAWC2SOutputs' not in config.keys():
             print 'No HAWC2SOutputs output dictionary given proceeding' +\

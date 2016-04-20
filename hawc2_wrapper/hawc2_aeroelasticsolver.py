@@ -282,23 +282,19 @@ class HAWC2AeroElasticSolver(Group):
 
         if 'master_file' not in config.keys():
             raise RuntimeError('You need to supply the name of the master' +
-                               'file in the configuration dictionary.')
-
-        if 'HAWC2GeometryBuilder' not in config.keys():
-            raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2GeometryBuilder.')
+                               ' file in the configuration dictionary.')
 
         if 'HAWC2InputWriter' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2InputWriter.')
+                               ' for HAWC2InputWriter.')
 
         if 'HAWC2Wrapper' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2Wrapper.')
+                               ' for HAWC2Wrapper.')
 
         if 'HAWC2Outputs' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2Outputs.')
+                               ' for HAWC2Outputs.')
 
         if 'aerodynamic_sections' not in config.keys():
             config['aerodynamic_sections'] = 40
@@ -323,7 +319,7 @@ class HAWC2AeroElasticSolver(Group):
         if 'HAWC2SInputWriter' not in config.keys():
             config['HAWC2SInputWriter'] = {}
             print 'No configuration dictionary given for HAWC2SInputWriter' +\
-                  'proceeding with default values.'
+                  ' proceeding with default values.'
 
         if 'no_bins' not in config['HAWC2Outputs'].keys():
             config['HAWC2Outputs']['no_bins'] = 128
