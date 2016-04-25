@@ -25,7 +25,7 @@ class HAWC2GeometryBuilder(object):
     """
     def __init__(self, blade_ni_span, interp_from_htc=True):
         """
-        parameters
+        Parameters
         ----------
         blade_ni_span: int
             number of nodes along the span
