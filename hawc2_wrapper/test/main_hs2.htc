@@ -8,7 +8,7 @@ begin aero;
   pc_filename ./data/DTU_10MW_RWT_pc.dat;
   induction_method 1;
   aerocalc_method  1;
-  aerosections 50;
+  aerosections 30;
   ae_sets         1 1 1;
   tiploss_method  1;
   dynstall_method 2;
