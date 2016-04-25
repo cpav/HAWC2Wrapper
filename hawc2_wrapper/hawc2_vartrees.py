@@ -450,7 +450,8 @@ class HAWC2Wind(object):
                     'shear_factor', 'turb_format', 'tower_shadow_method',
                     'scale_time_start', 'wind_ramp_t0', 'wind_ramp_t1',
                     'wind_ramp_factor0', 'wind_ramp_factor1', 'iec_gust',
-                    'iec_gust_type', 'G_A', 'G_phi0', 'G_t0', 'G_T']
+                    'iec_gust_type', 'G_A', 'G_phi0', 'G_t0', 'G_T',
+                    'wind_ramp_abs']
 
     def add_shadow(self, shadow_name):
 
@@ -787,14 +788,17 @@ class HAWC2VarTrees(object):
             Dictinary that has as keys tags (e.g. '[wsp]'). 
         """
         keys = case.keys()
-
         for var in self.sim.var:
             if '['+var+']' in keys:
                 setattr(self.sim, var, case['['+var+']'])
         self.sim.logfile = os.path.join(case['[log_dir]'],case['[Case id.]']+'.log')
         for var in self.wind.var:
             if '['+var+']' in keys:
-                setattr(self.wind, var, case['['+var+']'])
+                if var == 'wind_ramp_abs':
+                    self.wind.wind_ramp_abs = []
+                    self.wind.wind_ramp_abs.append(eval(case['['+var+']']))
+                else:
+                    setattr(self.wind, var, case['['+var+']'])
         self.wind.windfield_rotations = \
             array([0., 0., case['[wdir]']])
         for var in self.aero.var:
