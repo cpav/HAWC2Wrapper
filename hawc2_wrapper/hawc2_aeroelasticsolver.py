@@ -91,7 +91,7 @@ class HAWC2Workflow(Component):
         if self.with_structure:
             self.add_param('blade_beam_structure', shape=cssize)
 
-        self.geom = HAWC2GeometryBuilder(**config['HAWC2GeometryBuilder'])
+        self.geom = HAWC2GeometryBuilder(config['structural_sections'], **config['BladeGeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
         self.geom.c12axis_init[:, :3] /= self.geom.c12axis_init[-1, 2]
 
@@ -284,9 +284,8 @@ class HAWC2AeroElasticSolver(Group):
             raise RuntimeError('You need to supply the name of the master' +
                                'file in the configuration dictionary.')
 
-        if 'HAWC2GeometryBuilder' not in config.keys():
-            raise RuntimeError('You need to supply a config dict' +
-                               'for HAWC2GeometryBuilder.')
+        if 'BladeGeometryBuilder' not in config.keys():
+            config['BladeGeometryBuilder'] = {}
 
         if 'HAWC2InputWriter' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
