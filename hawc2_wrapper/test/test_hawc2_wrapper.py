@@ -13,6 +13,7 @@ import copy
 
 
 def assert_differet_types(self, val, var, vt):
+
     if type(val) == str:
         self.assertEqual(val, getattr(vt, var))
     elif type(val) == np.ndarray:
@@ -24,11 +25,12 @@ def assert_differet_types(self, val, var, vt):
                 for j in range(len(val[i])):
                     self.assertAlmostEqual(val[i][j],
                                            getattr(vt, var)[i][j], places=14)
-
+        elif type(val[0]) == list:
+            for a, b in zip(val[0], getattr(vt, var)[0]):
+                self.assertAlmostEqual(a, b, places=14)
         else:
             self.assertAlmostEqual(val, getattr(vt, var), places=14)
     else:
-
         self.assertAlmostEqual(val, getattr(vt, var), places=14)
 
 
@@ -83,9 +85,9 @@ class Test(unittest.TestCase):
 
     def test_IO_Wind(self):
 
-        init = read_htc('main_hs2.htc')
+        init = read_htc('main_h2.htc')
 
-        writer = HAWC2SInputWriter()
+        writer = HAWC2InputWriter()
 
         for var in init.vartrees.wind.var:
 
@@ -104,6 +106,9 @@ class Test(unittest.TestCase):
                 setattr(writer.vartrees.wind, 'wind_ramp_t1', val)
             if var in ['G_A', 'G_phi0', 'G_t0', 'G_T']:
                 setattr(writer.vartrees.wind, 'iec_gust', True)
+            if var in ['wind_ramp_abs']:
+                val = [[0., 1., 2., 3.]]
+                writer.vartrees.wind.wind_ramp_abs = val
             writer.case_id = 'h2s'
             writer.execute()
 
@@ -403,7 +408,7 @@ class Test(unittest.TestCase):
         writer = HAWC2SInputWriter()
         writer.vartrees = copy.copy(reader.vartrees)
         writer.case_id = 'h2s'
-        writer.vartrees.dlls.risoe_controller.dll_init.nV = 21
+        writer.vartrees.dlls.risoe_controller.dll_init.nV = 11
         writer.execute()
         wrapper = HAWC2Wrapper()
         wrapper.hawc2bin = 'HAWC2s.exe'
@@ -429,27 +434,17 @@ class Test(unittest.TestCase):
                                           [20., 0.4, 80.]])
         freq.execute()
 
-        opt_ref = [[5.0, 0.1856139007801657E+01, 5.997000000000000],
-                   [6.0, 0.7679248486373157E+00, 5.997000000000000],
-                   [7.0, 0.2756222542925286E-02, 6.388794823610514],
-                   [8.0, 0.2674377573694913E-02, 7.301487463662347],
-                   [9.0, 0.2674368819285188E-02, 8.214173397307714],
-                   [10.0, 0.2674368818350105E-02, 9.126859330341988],
-                   [11.0, 0.2674368818350105E-02, 9.591314000000001],
-                   [12.0, 0.4128043801574695E+01, 9.591314000000001],
-                   [13.0, 0.6998870452044216E+01, 9.591314000000001],
-                   [14.0, 0.9047112663285953E+01, 9.591314000000001],
-                   [15.0, 0.1075513280195886E+02, 9.591314000000001],
-                   [16.0, 0.1228078643556466E+02, 9.591314000000001],
-                   [17.0, 0.1368494154839761E+02, 9.591314000000001],
-                   [18.0, 0.1499512279716439E+02, 9.591314000000001],
-                   [19.0, 0.1623682089352936E+02, 9.591314000000001],
-                   [20.0, 0.1742409870354544E+02, 9.591314000000001],
-                   [21.0, 0.1856907953949775E+02, 9.591314000000001],
-                   [22.0, 0.1967436315021541E+02, 9.591314000000001],
-                   [23.0, 0.2074408302584453E+02, 9.591314000000001],
-                   [24.0, 0.2178409809683554E+02, 9.591314000000001],
-                   [25.0, 0.2279885895128390E+02, 9.591314000000001]]
+        opt_ref = [[0.50E+01, 0.1863090680444458E+01, 0.5997000000000000E+01],
+                    [0.70E+01, 0.1537206489604983E-01, 0.6388779164279890E+01],
+                    [0.90E+01, 0.1532192061020441E-01, 0.8214173303933840E+01],
+                    [0.11E+02, 0.2675721642358379E-02, 0.9591314000000001E+01],
+                    [0.13E+02, 0.6994777915862955E+01, 0.9591314000000001E+01],
+                    [0.15E+02, 0.1075031722912473E+02, 0.9591314000000001E+01],
+                    [0.17E+02, 0.1368127748035164E+02, 0.9591314000000001E+01],
+                    [0.19E+02, 0.1623289642993288E+02, 0.9591314000000001E+01],
+                    [0.21E+02, 0.1856497687729961E+02, 0.9591314000000001E+01],
+                    [0.23E+02, 0.2074073924833359E+02, 0.9591314000000001E+01],
+                    [0.25E+02, 0.2279392879300183E+02, 0.9591314000000001E+01]]
 
         for a, b in zip(opt_ref, output.operational_data):
             self.compare_lists(a, b)
@@ -457,3 +452,4 @@ class Test(unittest.TestCase):
 if __name__ == '__main__':
 
     unittest.main()
+
