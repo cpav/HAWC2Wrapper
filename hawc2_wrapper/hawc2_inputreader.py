@@ -82,7 +82,6 @@ class HAWC2InputReader(object):
         return vt
 
     def read_operational_data_file(self):
-
         data = loadtxt(self.vartrees.h2s.operational_data_filename, skiprows=1)
         if len(data.shape) == 1:
             data = data.reshape([1, data.shape[0]])
@@ -168,8 +167,12 @@ class HAWC2InputReader(object):
             vt.wind_ramp_factor1 = ramp[3]
         ramp = section.get_entry('wind_ramp_abs')
         if ramp is not None:
-            for rm in ramp:
-                vt.wind_ramp_abs.append(rm)
+            if type(ramp[0]) is not list:
+                vt.wind_ramp_abs = [ramp]
+            else:
+                for rm in ramp:
+                    vt.wind_ramp_abs.append(rm)
+
         gust = section.get_entry('iec_gust')
         if gust is not None:
             vt.iec_gust = True
