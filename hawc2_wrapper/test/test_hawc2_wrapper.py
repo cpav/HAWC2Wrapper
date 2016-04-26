@@ -60,7 +60,7 @@ class Test(unittest.TestCase):
             elif ref is np.nan:
                 self.assertIs(val, np.nan)
             else:
-                self.assertLess(abs(val/ref - 1.), 1e-4)
+                self.assertLess(abs(val/ref - 1.), 0.02)
 
     def test_IO_Aero(self):
 
