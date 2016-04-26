@@ -337,7 +337,7 @@ class Test(unittest.TestCase):
 
             wrapper = HAWC2Wrapper()
             wrapper.copyback_results = False
-            wrapper.hawc2bin = '/bin/HAWC2mb.exe'
+            wrapper.hawc2bin = 'HAWC2mb.exe'
             wrapper.log_directory = case['[log_dir]']
             wrapper.case_id = writer.case_id
             wrapper.verbose = False
@@ -374,7 +374,7 @@ class Test(unittest.TestCase):
 
             wrapper = HAWC2Wrapper()
             wrapper.copyback_results = False
-            wrapper.hawc2bin = '/bin/HAWC2mb.exe'
+            wrapper.hawc2bin = 'HAWC2mb.exe'
             wrapper.log_directory = case['[log_dir]']
             wrapper.case_id = writer.case_id
             wrapper.verbose = False
@@ -411,7 +411,7 @@ class Test(unittest.TestCase):
         writer.vartrees.dlls.risoe_controller.dll_init.nV = 11
         writer.execute()
         wrapper = HAWC2Wrapper()
-        wrapper.hawc2bin = '/bin/HAWC2s.exe'
+        wrapper.hawc2bin = 'HAWC2s.exe'
         wrapper.case_id = writer.case_id
         wrapper.verbose = False
         wrapper.copyback_results = False
