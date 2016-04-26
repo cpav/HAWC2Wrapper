@@ -311,11 +311,11 @@ begin dll;
 ;
   begin type2_dll;
     name risoe_controller ;
-    filename  ./control/risoe_controller.dll ;
+    filename  ./control/dtu_we_controller.dll ;
     dll_subroutine_init init_regulation ;
     dll_subroutine_update update_regulation ;
-    arraysizes_init  52 1 ;
-    arraysizes_update  12 100 ;
+    arraysizes_init  100 1 ;
+    arraysizes_update  50 100 ;
     begin init ;
        ; Overall parameters
       constant   1 10000.0      ; Rated power [kW]
