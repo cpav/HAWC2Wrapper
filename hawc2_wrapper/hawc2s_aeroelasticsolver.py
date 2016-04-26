@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import os
-import shutil
+import pickle
 
 from openmdao.api import Component, Group, ParallelGroup
 
@@ -10,6 +10,11 @@ from hawc2_inputwriter import HAWC2SInputWriter
 from hawc2_wrapper import HAWC2Wrapper
 from hawc2_output import HAWC2SOutputCompact, FreqDampTarget
 from hawc2_geometry import HAWC2GeometryBuilder
+
+try:
+    from fatfreq import fatfreq
+except:
+    print 'Not able to import module to compute fatigue in frequency domain!'
 
 
 class HAWC2SWorkflow(Component):
@@ -73,7 +78,11 @@ class HAWC2SWorkflow(Component):
             self.with_freq_placement = True
         else:
             self.with_freq_placement = False
-
+        if 'Fatigue' in config.keys():
+            self.with_fatigue = True
+        else:
+            self.with_fatigue = False
+            
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
 
@@ -132,6 +141,13 @@ class HAWC2SWorkflow(Component):
 
             self.freq = FreqDampTarget(**config['FreqDampTarget'])
             self.add_output('freq_factor', shape=[nws, 2*freq_nf])
+
+        if self.with_fatigue:
+            self.Wind = pickle.load( open( "wind_structure.pkl", "rb" ) )
+            self.Sensors = config['Fatigue']['Sensors']
+            self.m = config['Fatigue']['m']
+            self.add_output('fatigue', shape=[nws, len(self.Sensors)])
+
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -196,6 +212,13 @@ class HAWC2SWorkflow(Component):
             self.freq.execute()
             unknowns['freq_factor'] = self.freq.freq_factor
 
+        if self.with_fatigue:
+            NewWind = fatfreq.select_wind(self.Wind, self.output.wsp)
+            Damage, StdDev = fatfreq.FatigueFromPSD(self.output.rpm, NewWind, 
+                                                    self.Sensors, 
+                                                    self.output.cl_matrices,
+                                                    self.m)
+            unknowns['fatigue'] = Damage
         os.chdir(self.basedir)
 
     def _check_cases(self, vt, case_id, case):
@@ -307,6 +330,11 @@ class OutputsAggregator(Component):
         else:
             self.with_freq_placement = False
 
+        if 'Fatigue' in config.keys():
+            self.with_fatigue = True
+        else:
+            self.with_fatigue = False
+            
         if self.with_freq_placement:
 
             freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
@@ -317,6 +345,13 @@ class OutputsAggregator(Component):
 
             self.add_output('freq_factor', shape=[n_cases, 2*freq_nf])
 
+        if self.with_fatigue:
+            ns = len(config['Fatigue']['Sensors'])
+            for i in range(n_cases):
+                p_name = 'fatigue_%d' % i
+                self.add_param(p_name, shape=[1, ns])
+
+            self.add_output('fatigue', shape=[n_cases, ns])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -341,6 +376,11 @@ class OutputsAggregator(Component):
                 p_name = 'freq_factor_%d' % i
                 unknowns['freq_factor'][i, :] = params[p_name][0, :]
 
+        if self.with_fatigue:
+            for i in range(self.n_cases):
+                p_name = 'fatigue_%d' % i
+                unknowns['fatigue'][i, :] = params[p_name][0, :]
+
         fid = open('Rotor_loads.dat', 'w')
         fmt = '#'+'%23s '+(len(self.sensor_rotor)-1)*'%24s '+'\n'
         fid.write(fmt % tuple(self.sensor_rotor))
@@ -364,13 +404,13 @@ class HAWC2SAeroElasticSolver(Group):
     def __init__(self, config, cssize=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
-        if cssize != None:
-             print 'Warning: cssize should be set in config["structural_sections"]'
-             config['structural_sections'] = cssize
+        if cssize is not None:
+            print 'Warning: cssize should be set in config["structural_sections"]'
+            config['structural_sections'] = cssize
 
-        if pfsize != None:
-             print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
-             config['aerodynamic_sections'] = pfsize
+        if pfsize is not None:
+            print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
+            config['aerodynamic_sections'] = pfsize
 
         # check that the config is ok
         self._check_config(config)
@@ -409,6 +449,8 @@ class HAWC2SAeroElasticSolver(Group):
             promotions += ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']
         if 'FreqDampTarget' in config.keys():
             promotions += ['freq_factor']
+        if 'Fatigue' in config.keys():
+            promotions += ['fatigue']
         self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
@@ -425,7 +467,10 @@ class HAWC2SAeroElasticSolver(Group):
             if 'FreqDampTarget' in config.keys():
                 self.connect('pg.%s.freq_factor' % case_id,
                              'aggregate.freq_factor_%d' % i)
-
+            if 'Fatigue' in config.keys():
+                self.connect('pg.%s.fatigue' % case_id,
+                             'aggregate.fatigue_%d' % i)
+                             
     def _check_config(self, config):
 
         if 'master_file' not in config.keys():
