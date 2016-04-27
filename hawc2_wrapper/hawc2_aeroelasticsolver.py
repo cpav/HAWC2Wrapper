@@ -267,7 +267,7 @@ class HAWC2AeroElasticSolver(Group):
         self.add('aggregate', OutputsAggregator(config, len(dlcs)),
                  promotes=agg_promo)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
-
+        
         for icase, case in enumerate(dlcs):
             case_id = case['[case_id]']
             pg.add(case_id, HAWC2Workflow(config, case, cssize, pfsize),

@@ -14,7 +14,7 @@ else:
 from hawc2_wrapper.hawc2_aeroelasticsolver import HAWC2AeroElasticSolver
 from hawc2_wrapper.hawc2s_aeroelasticsolver import HAWC2SAeroElasticSolver
 
-H2 = False
+H2 = True
 
 top = Problem(impl=impl, root=Group())
 root = top.root
@@ -24,9 +24,7 @@ config = {}
 
 # HAWC2GeometryBuilder
 cf = {}
-cf['blade_ni_span'] = 27
 cf['interp_from_htc'] = False
-cf['hub_radius'] = 3.
 config['HAWC2GeometryBuilder'] = cf
 
 # HAWC2Wrapper
@@ -94,46 +92,6 @@ if not H2:
                                        [20., 0.4, 80.]])
     config['FreqDampTarget'] = cf
 
-    cf = {}
-    cf['Sensors'] = [[3], [4]]
-    cf['m'] = [3, 3]
-    
-    config['Fatigue'] = cf
-    from fatfreq import fatfreq
-    from hawc2_wrapper.hawc2_inputreader import HAWC2InputReader
-    from hawc2_wrapper.hawc2_inputwriter import HAWC2SInputWriter, HAWC2InputWriter
-    from hawc2_wrapper.hawc2_wrapper import HAWC2Wrapper
-    from hawc2_wrapper.hawc2_output import HAWC2OutputBase, HAWC2SOutputBase, FreqDampTarget
-    import wetb.hawc2.Hawc2io as Hawc2io
-    
-    from wetb.prepost import dlcdefs
-    opt_tags = dlcdefs.excel_stabcon('./DLCs_fatigue/', fext='xls', silent=True)
-    reader = HAWC2InputReader()
-    reader.htc_master_file = 'main_h2_wind.htc'
-    reader.execute()
-    cases_list = []
-    for icase, case in enumerate(opt_tags):
-        cases_list.append(case['[res_dir]'])
-        case['[run_dir]'] = ''
-        writer = HAWC2InputWriter()
-        writer.vartrees = reader.vartrees
-        writer.vartrees.aero.ae_filename = 'data/'+case['[Case id.]']+'_ae.dat'
-        writer.vartrees.aero.pc_filename = 'data/'+case['[Case id.]']+'_pc.dat'
-        writer.case_id = case['[case_id]']
-        writer.vartrees.tags2var(case)
-        writer.vartrees.aero.aerosections = 30
-        writer.execute()
-
-        wrapper = HAWC2Wrapper()
-        wrapper.copyback_results = False
-        wrapper.hawc2bin = 'HAWC2mb.exe'
-        wrapper.dry_run = False
-        wrapper.log_directory = case['[log_dir]']
-        wrapper.case_id = writer.case_id
-        wrapper.verbose = False
-        wrapper.compute()
-
-    
 
 if H2:
     root.add('loads', HAWC2AeroElasticSolver(config, './DLCs_longer/', None, None), promotes=['*'])
