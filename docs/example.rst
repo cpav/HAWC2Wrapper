@@ -23,3 +23,27 @@ Three components are also defined:
     
 These examples can be executed also by computing the finite differences in parallel.
 To do so you need to change the variable *par_fd* from 1 to a higher number that is lower than the number of design variables *n*.
+
+test_hawc2_wrapper_openmdao.py
+------------------------------
+
+This file tests a workflow to perform both HAWC2 and HAWCStab2 computations. It is possible to switch between the two software by changing the variable *H2* at line 17. 
+
+The HAWCStab2 workflow computes the stady states at the wind speeds defined in the configuration dictionary. Both a user defined case, where wind speed, pitch angle and rotor speed are provided, and a general case where a wind sweep is perormed are evaluated. The freqeuncy placement module is also called to evaluate the distance of a modal freqeuncy from a target value.
+
+The HAWC2 workflow launches a set of simulations defined in the folder *DLCs_long* and computes statistics and fatigue.
+
+test_hawc2s_w_fatigue_openmdao.py
+---------------------------------
+
+This example is definetely not optimal but it's what I have so far..
+
+This file tests the workflow to compute the fatigue with HAWCStab2 in frequency domain. To run this workflow some steps need to be performed beforehand to generate the wind input files.
+
+    * Uncomment line 69 `compute_wind_input()` and run the script. This will run a function that calls HAWC2 for the cases defined in *DLC2_fatigue*;
+    * Once the simulations are executed, it will crash but in your working folder there will be 3 new folders with HAWC2 results;
+    * compy the name of the HAWC2 results folder in the variable *cases_list*. Note that you should only change the 8 digit number a the end of the main folder name;
+    * comment line 69 `compute_wind_input()` and uncomment line 75 `fatfreq.ComputeWindResp(cases_list, 'wind_structure', Fmax=2.5)`
+    * run the script.
+    
+
