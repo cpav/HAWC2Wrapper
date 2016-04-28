@@ -364,7 +364,7 @@ class HAWC2Simulation(object):
         self.time_stop = 300.  
         self.solvertype = 1
         self.convergence_limits = [1.0e3, 1.0, 0.7]
-        self.on_no_convergence = ''
+        self.on_no_convergence = 'continue'
         self.max_iterations = 100
         self.newmark_deltat = 0.02
         self.eig_out = False
