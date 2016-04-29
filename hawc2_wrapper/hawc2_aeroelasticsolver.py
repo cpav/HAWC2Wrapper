@@ -43,7 +43,7 @@ class HAWC2Workflow(Component):
     -------
 
     """
-    def __init__(self, config, case, cssize, pfsize):
+    def __init__(self, config, case):
         super(HAWC2Workflow, self).__init__()
 
         case_id = case['[case_id]']
@@ -57,7 +57,6 @@ class HAWC2Workflow(Component):
 
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
-
         self.writer = HAWC2InputWriter(**config['HAWC2InputWriter'])
 
         self.writer.turb_directory = config['HAWC2InputWriter']['turb_directory']
@@ -77,6 +76,8 @@ class HAWC2Workflow(Component):
         self.wrapper = HAWC2Wrapper(**config['HAWC2Wrapper'])
         self.wrapper.case_id = case_id
         self.wrapper.log_directory = case['[log_dir]']
+        naes = config['aerodynamic_sections'] - 2
+        nsts = config['structural_sections']
 
         self.output = HAWC2OutputCompact(config['HAWC2Outputs'])
 
@@ -89,6 +90,10 @@ class HAWC2Workflow(Component):
             self.add_param('tsr', 0.)
 
         if self.with_structure:
+            if config['hawc2_FPM']:
+                cssize = (config['structural_sections'], 30)
+            else:
+                cssize = (config['structural_sections'], 19)
             self.add_param('blade_beam_structure', shape=cssize)
 
         self.geom = HAWC2GeometryBuilder(config['structural_sections'], **config['BladeGeometryBuilder'])
@@ -99,7 +104,7 @@ class HAWC2Workflow(Component):
             self.geom_var = ['s', 'x', 'y', 'z', 'rot_x', 'rot_y', 'rot_z',
                              'chord', 'rthick', 'p_le']
             for v in self.geom_var:
-                self.add_param(v, shape=[pfsize])
+                self.add_param(v, shape=(config['aerodynamic_sections']))
             self.add_param('blade_length', 0.)
             self.geom.interp_from_htc = False
         else:
@@ -227,14 +232,22 @@ class HAWC2AeroElasticSolver(Group):
     """
     OpenMDAO group to execute HAWC2 in parallel.
 
-    parameters
-    -----------
+    Parameters
+    ----------
     config: dict
         Configuration dictionary.
 
     """
-    def __init__(self, config, dlcs_folder, cssize, pfsize):
+    def __init__(self, config, dlcs_folder, cssize=None, pfsize=None):
         super(HAWC2AeroElasticSolver, self).__init__()
+
+        if cssize is not None:
+            print 'Warning: cssize should be set in config["structural_sections"]'
+            config['structural_sections'] = cssize
+
+        if pfsize is not None:
+            print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
+            config['aerodynamic_sections'] = pfsize
 
         # check that the config is ok
         self._check_config(config)
@@ -271,7 +284,7 @@ class HAWC2AeroElasticSolver(Group):
 
         for icase, case in enumerate(dlcs):
             case_id = case['[case_id]'].replace('-', '_')
-            pg.add(case_id, HAWC2Workflow(config, case, cssize, pfsize),
+            pg.add(case_id, HAWC2Workflow(config, case),
                    promotes=promote)
 
             self.connect('pg.%s.outputs_statistics' % case_id,
@@ -314,6 +327,11 @@ class HAWC2AeroElasticSolver(Group):
             config['with_structure'] = False
             print 'Structural properties are not set as parameters because' +\
                   ' no option "with_structure" was given in the configuration.'
+
+        if 'hawc2_FPM' not in config.keys():
+            config['hawc2_FPM'] = False
+            print 'hawc2_FPM not supplied: structural properties assumed to be ' +\
+                  'in standard HAWC2 format.'
 
         if 'with_geom' not in config.keys():
             config['with_geom'] = False
