@@ -45,7 +45,7 @@ class HAWC2Workflow(Component):
     """
     def __init__(self, config, case, cssize, pfsize):
         super(HAWC2Workflow, self).__init__()
-        
+
         case_id = case['[case_id]']
         self.case = case
         self.basedir = os.getcwd()
@@ -54,12 +54,12 @@ class HAWC2Workflow(Component):
         self.with_structure = config['with_structure']
         self.with_geom = config['with_geom']
         self.with_tsr = config['with_tsr']
-        
+
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
 
         self.writer = HAWC2InputWriter(**config['HAWC2InputWriter'])
-        
+
         self.writer.turb_directory = config['HAWC2InputWriter']['turb_directory']
         self.writer.data_directory = config['HAWC2InputWriter']['data_directory']
 
@@ -267,9 +267,9 @@ class HAWC2AeroElasticSolver(Group):
         self.add('aggregate', OutputsAggregator(config, len(dlcs)),
                  promotes=agg_promo)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
-        
+
         for icase, case in enumerate(dlcs):
-            case_id = case['[case_id]']
+            case_id = case['[case_id]'].replace('-', '_')
             pg.add(case_id, HAWC2Workflow(config, case, cssize, pfsize),
                    promotes=promote)
 
