@@ -146,10 +146,11 @@ class HAWC2Workflow(Component):
         self.writer.execute()
         self.wrapper.compute()
 
-        self.output.execute(self.case)
+        if self.wrapper.success and not self.output.dry_run:
+            self.output.execute(self.case)
 
-        unknowns['outputs_statistics'] = self.output.outputs_statistics
-        unknowns['outputs_fatigue'] = self.output.outputs_fatigue
+            unknowns['outputs_statistics'] = self.output.outputs_statistics
+            unknowns['outputs_fatigue'] = self.output.outputs_fatigue
 
         os.chdir(self.basedir)
 

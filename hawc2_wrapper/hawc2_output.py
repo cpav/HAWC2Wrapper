@@ -100,6 +100,10 @@ class HAWC2OutputCompact(HAWC2OutputBase):
     def __init__(self, config):
         super(HAWC2OutputCompact, self).__init__(config)
 
+        self.dry_run = False
+        if 'dry_run' in config:
+            self.dry_run = config['dry_run']
+
         self.channel = config['channels']
 
         if 'stat_list' in config.keys():
