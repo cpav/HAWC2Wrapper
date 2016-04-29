@@ -324,6 +324,10 @@ class HAWC2AeroElasticSolver(Group):
             print 'No configuration dictionary given for HAWC2SInputWriter' +\
                   'proceeding with default values.'
 
+        if 'channels' not in config['HAWC2Outputs']:
+            raise RuntimeError('You need to supply a list of output channels ' +
+                               'in HAWC2Outputs["channels"].')
+
         if 'no_bins' not in config['HAWC2Outputs'].keys():
             config['HAWC2Outputs']['no_bins'] = 128
         if 'neq' not in config['HAWC2Outputs'].keys():
