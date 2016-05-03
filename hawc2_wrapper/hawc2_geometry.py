@@ -10,38 +10,35 @@ from PGL.main.distfunc import distfunc
 
 class HAWC2GeometryBuilder(object):
     """
-    parameters
-    ----------
-    bladegeom: BladeGeometryVT
+    Class to modify the blade geometry definition. Based on the inputs it
+    interpolates the c2def or define the c2def based on the bladegeom variable
+    tree.
 
-    c12axis_init: array
-
-    interp_from_htc: bool
-        Interpolate blade onto the distribution defined in the htc master file
-
-    blade_ni_span: int
-        spanwise distribution of blade planform
-
-    blade_length: float
-
-    returns
+    Returns
     -------
     blade_ae: HAWC2BladeGeometry
+        Variable tree with the ae definition.
 
     c12axis: array
+        Array of including the c2def.
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, blade_ni_span, interp_from_htc=True):
+        """
+        Parameters
+        ----------
+        blade_ni_span: int
+            number of nodes along the span
+        interp_from_htc: bool
+            Interpolate blade onto the distribution defined in the htc master file
+        """
         super(HAWC2GeometryBuilder, self).__init__()
 
         self.bladegeom = BladeGeometryVT()
         self.blade_ae = HAWC2BladeGeometry()
 
-        for k, w in kwargs.iteritems():
-            try:
-                setattr(self, k, w)
-            except:
-                pass
+        self.blade_ni_span = blade_ni_span
+        self.interp_from_htc = interp_from_htc
 
     def execute(self):
 

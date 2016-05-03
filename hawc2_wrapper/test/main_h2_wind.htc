@@ -514,122 +514,98 @@ end dll;
 ;----------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;
 begin output;
-  filename ./res/DTU_10MW_RWT ;
-  time 99.0 1000.0 ;
-  ; data_format  hawc_ascii;
+  filename ./res/H2_Turb_07_Low_wind ;
+  time 300 900 ;
   data_format  hawc_binary;
   buffer 1 ;
-;
+  ;
   general time;
-  constraint bearing1 shaft_rot 2; angle and angle velocity
-  constraint bearing2 pitch1 5;    angle and angle velocity
-  constraint bearing2 pitch2 5;    angle and angle velocity
-  constraint bearing2 pitch3 5;    angle and angle velocity
-  aero omega ;
-  aero torque;
-  aero power;
-  aero thrust;
-  wind free_wind 1 0.0 0.0 -119; local wind at fixed position: coo (1=global,2=non-rotation rotor coo.), pos x, pos y, pos z
-  ; Moments:
-  mbdy momentvec tower  1 1  tower # tower base ;
-  mbdy momentvec tower  10 2 tower # tower yaw bearing ;
-  mbdy momentvec shaft  4 1  shaft # main bearing ;
-  mbdy momentvec blade1 2  2 blade1 # blade 1 root ;
-  mbdy momentvec blade2 2  2 blade2 # blade 2 root ;
-  mbdy momentvec blade3 2  2 blade3 # blade 3 root ;
-  mbdy momentvec blade1 13 1 local # blade 1 50% local e coo ;
-  mbdy momentvec blade2 13 1 local # blade 2 50% local e coo ;
-  mbdy momentvec blade3 13 1 local # blade 3 50% local e coo ;
-  ; Displacements and accellerations
-  mbdy state pos tower 10 1.0 global only 1 # Tower top FA displ;
-  mbdy state pos tower 10 1.0 global only 2 # Tower top SS displ;
-  mbdy state acc tower 10 1.0 global only 1 # Tower top FA acc;
-  mbdy state acc tower 10 1.0 global only 2 # Tower top SS acc;
-;
-  mbdy state pos blade1  26 1.0 blade1 # blade 1 tip pos ;
-  mbdy state pos blade2  26 1.0 blade2 # blade 2 tip pos ;
-  mbdy state pos blade3  26 1.0 blade3 # blade 3 tip pos ;
-  mbdy state pos blade1  26 1.0 global # gl blade 1 tip pos ;
-; - Monitor Aerodynamics - ;
-  aero windspeed 3 1 1 72.5;
-  aero alfa 1 72.5;
-  aero alfa 2 72.5;
-  aero alfa 3 72.5;
-  aero cl 1 72.5;
-  aero cl 2 72.5;
-  aero cl 3 72.5;
-  aero cd 1 72.5;
-  aero cd 2 72.5;
-  aero cd 3 72.5;
-; - Main Controller -
-; Output to controller
-  ; dll outvec 1 1 # time;
-  ; dll outvec 1 2 # slow speed shaft rad/s;
-  ; dll outvec 1 3 # pitch angle 1;
-  ; dll outvec 1 4 # pitch angle 2;
-  ; dll outvec 1 5 # pitch angle 3;
-  ; dll outvec 1 6 # WSP_x_global;
-  ; dll outvec 1 7 # WSP_y_global;
-  ; dll outvec 1 8 # WSP_z_global;
-  ; dll outvec 1 9 # Elec. pwr ;
-  ; dll outvec 1 10 # Grid flag ;
-; Input from controller
-  dll inpvec 1  1 # Generator torque reference            [Nm]   ;
-  dll inpvec 1  2 # Pitch angle reference of blade 1      [rad]  ;
-  dll inpvec 1  3 # Pitch angle reference of blade 2      [rad]  ;
-  dll inpvec 1  4 # Pitch angle reference of blade 3      [rad]  ;
-  dll inpvec 1  5 # Power reference                       [W]    ;
-  dll inpvec 1  6 # Filtered wind speed                   [m/s]  ;
-  dll inpvec 1  7 # Filtered rotor speed                  [rad/s];
-  dll inpvec 1  8 # Filtered rotor speed error for torque [rad/s];
-  dll inpvec 1  9 # Bandpass filtered rotor speed         [rad/s];
-  dll inpvec 1 10 # Proportional term of torque contr.    [Nm]   ;
-  dll inpvec 1 11 # Integral term of torque controller    [Nm]   ;
-  dll inpvec 1 12 # Minimum limit of torque               [Nm]   ;
-  dll inpvec 1 13 # Maximum limit of torque               [Nm]   ;
-  dll inpvec 1 14 # Torque limit switch based on pitch    [-]    ;
-  dll inpvec 1 15 # Filtered rotor speed error for pitch  [rad/s];
-  dll inpvec 1 16 # Power error for pitch                 [W]    ;
-  dll inpvec 1 17 # Proportional term of pitch controller [rad]  ;
-  dll inpvec 1 18 # Integral term of pitch controller     [rad]  ;
-  dll inpvec 1 19 # Minimum limit of pitch                [rad]  ;
-  dll inpvec 1 20 # Maximum limit of pitch                [rad]  ;
-  dll inpvec 1 21 # Torque reference from DT dammper      [Nm]  ;
-  dll inpvec 1 22 # Status signal                         [-]  ;
-  dll inpvec 1 23 # Total added pitch rate                [rad/s]  ;
-  dll inpvec 1 24 # Filtered Mean pitch for gain sch      [rad]  ;
-  dll inpvec 1 25 # Flag for mechnical brake              [0=off/1=on] ;
-  dll inpvec 1 26 # Flag for emergency pitch stop         [0=off/1=on] ;
-  dll inpvec 1 27 # LP filtered acceleration level        [m/s^2] ;
-; ; Output to generator model
-   ; dll outvec 2 1  # time ;
-   ; dll outvec 2 2  # Electrical torque reference [Nm] ;
-   ; dll outvec 2 3  # omega LSS ;
-; Input from generator model
-   dll inpvec 2 1  # Mgen LSS [Nm];
-   dll inpvec 2 2  # Pelec W ;
-   dll inpvec 2 3  # Mframe ;
-   dll inpvec 2 4  # Mgen HSS ;
-   dll inpvec 2 5  # Generator Pmech kW ;
-   dll inpvec 2 6  # Filtered Gen speed ;
-   dll inpvec 2 7  # Elec. pwr ;
-   dll inpvec 2 8  # Grid flag ;
-; Output to mechanical brake
-   dll inpvec 3 1 # Brake torque [Nm] ;
-; ; Input from mechanical brake
-   ; dll outvec 3 1 # Time [s] ;
-   ; dll outvec 3 2 # Generator LSS speed [rad/s] ;
-   ; dll outvec 3 3 # Deploy brake ;
-; ; Output to pitch servo
-   ; dll outvec 4 1 # time;
-   ; dll outvec 4 2 # pitchref 1;
-   ; dll outvec 4 3 # pitchref 2;
-   ; dll outvec 4 4 # pitchref 3;
-   ; dll outvec 4 5 # Emerg. stop;
-; Input from pitch servo
-   dll inpvec 4 1 # pitch 1;
-   dll inpvec 4 2 # pitch 2;
-   dll inpvec 4 3 # pitch 3;
-; Check tower clearence
-   dll inpvec 5 1 # Bltip tow min d [m];
+  constraint bearing1 shaft_rot 2; angle and angle velocity   
+  ; Vy_1(r), r = {0.18 ... 61.34}
+  aero windspeed 3 1 2    0.253443;
+  aero windspeed 3 1 2    1.010800;
+  aero windspeed 3 1 2    2.263191;
+  aero windspeed 3 1 2    3.995934;
+  aero windspeed 3 1 2    6.188714;
+  aero windspeed 3 1 2    8.815808;
+  aero windspeed 3 1 2   11.846410;
+  aero windspeed 3 1 2   15.245035;
+  aero windspeed 3 1 2   18.971832;
+  aero windspeed 3 1 2   22.983063;
+  aero windspeed 3 1 2   27.231713;
+  aero windspeed 3 1 2   31.667981;
+  aero windspeed 3 1 2   36.239876;
+  aero windspeed 3 1 2   40.893773;
+  aero windspeed 3 1 2   45.575104;
+  aero windspeed 3 1 2   50.229008;
+  aero windspeed 3 1 2   54.800920;
+  aero windspeed 3 1 2   59.237206;
+  aero windspeed 3 1 2   63.485872;
+  aero windspeed 3 1 2   67.497154;
+  aero windspeed 3 1 2   71.223908;
+  aero windspeed 3 1 2   74.622640;
+  aero windspeed 3 1 2   77.653246;
+  aero windspeed 3 1 2   80.280349;
+  aero windspeed 3 1 2   82.473126;
+  aero windspeed 3 1 2   84.205918;
+  aero windspeed 3 1 2   85.458109;
+  aero windspeed 3 1 2   86.215581;
+  ; Vy_2(r), r = {0.18 ... 61.34}
+  aero windspeed 3 2 2    0.253443 ;
+  aero windspeed 3 2 2    1.010800 ;
+  aero windspeed 3 2 2    2.263191 ;
+  aero windspeed 3 2 2    3.995934 ;
+  aero windspeed 3 2 2    6.188714 ;
+  aero windspeed 3 2 2    8.815808 ;
+  aero windspeed 3 2 2   11.846410 ;
+  aero windspeed 3 2 2   15.245035 ;
+  aero windspeed 3 2 2   18.971832 ;
+  aero windspeed 3 2 2   22.983063 ;
+  aero windspeed 3 2 2   27.231713 ;
+  aero windspeed 3 2 2   31.667981 ;
+  aero windspeed 3 2 2   36.239876 ;
+  aero windspeed 3 2 2   40.893773 ;
+  aero windspeed 3 2 2   45.575104 ;
+  aero windspeed 3 2 2   50.229008 ;
+  aero windspeed 3 2 2   54.800920 ;
+  aero windspeed 3 2 2   59.237206 ;
+  aero windspeed 3 2 2   63.485872 ;
+  aero windspeed 3 2 2   67.497154 ;
+  aero windspeed 3 2 2   71.223908 ;
+  aero windspeed 3 2 2   74.622640 ;
+  aero windspeed 3 2 2   77.653246 ;
+  aero windspeed 3 2 2   80.280349 ;
+  aero windspeed 3 2 2   82.473126 ;
+  aero windspeed 3 2 2   84.205918 ;
+  aero windspeed 3 2 2   85.458109 ;
+  aero windspeed 3 2 2   86.215581 ;
+  ; Vy_3(r), r = {0.18 ... 61.34}
+  aero windspeed 3 3 2     0.253443 ;
+  aero windspeed 3 3 2     1.010800 ;
+  aero windspeed 3 3 2     2.263191 ;
+  aero windspeed 3 3 2     3.995934 ;
+  aero windspeed 3 3 2     6.188714 ;
+  aero windspeed 3 3 2     8.815808 ;
+  aero windspeed 3 3 2    11.846410 ;
+  aero windspeed 3 3 2    15.245035 ;
+  aero windspeed 3 3 2    18.971832 ;
+  aero windspeed 3 3 2    22.983063 ;
+  aero windspeed 3 3 2    27.231713 ;
+  aero windspeed 3 3 2    31.667981 ;
+  aero windspeed 3 3 2    36.239876 ;
+  aero windspeed 3 3 2    40.893773 ;
+  aero windspeed 3 3 2    45.575104 ;
+  aero windspeed 3 3 2    50.229008 ;
+  aero windspeed 3 3 2    54.800920 ;
+  aero windspeed 3 3 2    59.237206 ;
+  aero windspeed 3 3 2    63.485872 ;
+  aero windspeed 3 3 2    67.497154 ;
+  aero windspeed 3 3 2    71.223908 ;
+  aero windspeed 3 3 2    74.622640 ;
+  aero windspeed 3 3 2    77.653246 ;
+  aero windspeed 3 3 2    80.280349 ;
+  aero windspeed 3 3 2    82.473126 ;
+  aero windspeed 3 3 2    84.205918 ;
+  aero windspeed 3 3 2    85.458109 ;
+  aero windspeed 3 3 2    86.215581 ;
 end output;

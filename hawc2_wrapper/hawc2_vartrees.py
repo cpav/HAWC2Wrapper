@@ -1,6 +1,6 @@
 from numpy import zeros, array, pi
 from vartrees import RotorVT
-
+import os
 
 class HAWC2AirfoilPolar(object):
     """A single airfoil polar"""
@@ -44,7 +44,8 @@ class HAWC2BladeGeometry(object):
 
 class HAWC2BeamStructure(object):
 
-    def __init__(self):
+    def __init__(self, st_type):
+
         self.s = zeros([1])     # Running curve length of beam', units='m
         self.dm = zeros([1])    # Mass per unit length', units='kg/m
         self.x_cg = zeros([1])  # x-distance from blade axis to CM [m]
@@ -91,6 +92,16 @@ class HAWC2BeamStructure(object):
         self.K_56 = zeros([1])  # Elem. 5,6 of Constitutive Mat. [N*m**2]
         self.K_66 = zeros([1])  # Elem. 6,6 of Constitutive Mat. [N*m**2]
 
+        if st_type == 0:
+            self.var = ['s', 'dm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'x_sh',
+                        'y_sh', 'E', 'G', 'I_x', 'I_y', 'K', 'k_x', 'k_y', 'A',
+                        'pitch', 'x_e', 'y_e']
+        else:
+            self.var = ['s', 'dm', 'x_cg', 'y_cg', 'ri_x', 'ri_y', 'pitch',
+                        'x_e', 'y_e', 'K_11', 'K_12', 'K_13', 'K_14', 'K_15',
+                        'K_16', 'K_22', 'K_23', 'K_24', 'K_25', 'K_26', 'K_33',
+                        'K_34', 'K_35', 'K_36', 'K_44', 'K_45', 'K_46', 'K_55',
+                        'K_56', 'K_66']
 
 class HAWC2OrientationBase(object):
 
@@ -214,11 +225,13 @@ class HAWC2MainBody(object):
         self.damping_posdef = zeros(6)
         self.damping_aniso = zeros(6)
         self.copy_main_body = ''
-        self.c12axis = zeros([1])  # C12 axis containing (x_c12, y_c12, z_c12, twist)
+        self.c12axis = zeros([1, 4])  # C12 axis containing (x_c12, y_c12, z_c12, twist)
         self.concentrated_mass = []
-        self.body_set = array([1, 1])
         self.orientations = []
         self.constraints = []
+        self.var = ['body_name', 'body_type', 'st_input_type',
+                    'body_set', 'nbodies', 'node_distribution',
+                    'damping_posdef', 'damping_aniso','concentrated_mass']
 
     def add_orientation(self, orientation):
         if orientation == 'base':
@@ -261,6 +274,60 @@ class HAWC2MainBody(object):
         con.con_type = con_type
         return con
 
+    def array2hawc2beamstructure(self, blade_length, body_st):
+
+        bset = self.body_set[1] - 1
+        if self.st_input_type is 0:
+            self.beam_structure[bset].s = body_st[:, 0]
+            self.beam_structure[bset].dm = body_st[:, 1]
+            self.beam_structure[bset].x_cg = body_st[:, 2]
+            self.beam_structure[bset].y_cg = body_st[:, 3]
+            self.beam_structure[bset].ri_x = body_st[:, 4]
+            self.beam_structure[bset].ri_y = body_st[:, 5]
+            self.beam_structure[bset].x_sh = body_st[:, 6]
+            self.beam_structure[bset].y_sh = body_st[:, 7]
+            self.beam_structure[bset].E = body_st[:, 8]
+            self.beam_structure[bset].G = body_st[:, 9]
+            self.beam_structure[bset].I_x = body_st[:, 10]
+            self.beam_structure[bset].I_y = body_st[:, 11]
+            self.beam_structure[bset].K = body_st[:, 12]
+            self.beam_structure[bset].k_x = body_st[:, 13]
+            self.beam_structure[bset].k_y = body_st[:, 14]
+            self.beam_structure[bset].A = body_st[:, 15]
+            self.beam_structure[bset].pitch = body_st[:, 16]
+            self.beam_structure[bset].x_e = body_st[:, 17]
+            self.beam_structure[bset].y_e = body_st[:, 18]
+        else:
+            self.beam_structure[bset].s = body_st[:, 0]
+            self.beam_structure[bset].dm = body_st[:, 1]
+            self.beam_structure[bset].x_cg = body_st[:, 2]
+            self.beam_structure[bset].y_cg = body_st[:, 3]
+            self.beam_structure[bset].ri_x = body_st[:, 4]
+            self.beam_structure[bset].ri_y = body_st[:, 5]
+            self.beam_structure[bset].pitch = body_st[:, 6]
+            self.beam_structure[bset].x_e = body_st[:, 7]
+            self.beam_structure[bset].y_e = body_st[:, 8]
+            self.beam_structure[bset].K_11 = body_st[:, 9]
+            self.beam_structure[bset].K_12 = body_st[:, 10]
+            self.beam_structure[bset].K_13 = body_st[:, 11]
+            self.beam_structure[bset].K_14 = body_st[:, 12]
+            self.beam_structure[bset].K_15 = body_st[:, 13]
+            self.beam_structure[bset].K_16 = body_st[:, 14]
+            self.beam_structure[bset].K_22 = body_st[:, 15]
+            self.beam_structure[bset].K_23 = body_st[:, 16]
+            self.beam_structure[bset].K_24 = body_st[:, 17]
+            self.beam_structure[bset].K_25 = body_st[:, 18]
+            self.beam_structure[bset].K_26 = body_st[:, 19]
+            self.beam_structure[bset].K_33 = body_st[:, 20]
+            self.beam_structure[bset].K_34 = body_st[:, 21]
+            self.beam_structure[bset].K_35 = body_st[:, 22]
+            self.beam_structure[bset].K_36 = body_st[:, 23]
+            self.beam_structure[bset].K_44 = body_st[:, 24]
+            self.beam_structure[bset].K_45 = body_st[:, 25]
+            self.beam_structure[bset].K_46 = body_st[:, 26]
+            self.beam_structure[bset].K_55 = body_st[:, 27]
+            self.beam_structure[bset].K_56 = body_st[:, 28]
+            self.beam_structure[bset].K_66 = body_st[:, 29]
 
 class HAWC2MainBodyList(object):
 
@@ -294,15 +361,17 @@ class HAWC2MainBodyList(object):
 class HAWC2Simulation(object):
 
     def __init__(self):
-        self.time_stop = 300.  # Simulation stop time
-        self.solvertype = 1    # Solver type. Default Newmark
-        self.convergence_limits = [1.0e3, 1.0, 0.7]  # Sovler convergence limits
-        self.on_no_convergence = ''
-        self.max_iterations = 100   # Maximum iterations
-        self.newmark_deltat = 0.02  # Newmark time step
+        self.time_stop = 300.
+        self.solvertype = 1
+        self.convergence_limits = [1.0e3, 1.0, 0.7]
+        self.on_no_convergence = 'continue'
+        self.max_iterations = 100
+        self.newmark_deltat = 0.02
         self.eig_out = False
         self.logfile = 'hawc2_case.log'
-
+        self.var = ['time_stop', 'solvertype', 'convergence_limits',
+                    'on_no_convergence', 'max_iterations', 'newmark_deltat',
+                    'logfile']
 
 class HAWC2Aero(object):
 
@@ -321,7 +390,9 @@ class HAWC2Aero(object):
         self.pc_filename = ''
         self.aero_distribution_file = ''
         self.aero_distribution_set = 1
-
+        self.var = ['nblades', 'hub_vec_coo', 'induction_method',
+                    'aerocalc_method', 'aerosections', 'tiploss_method',
+                    'dynstall_method', 'ae_filename', 'pc_filename']
 
 class HAWC2Mann(object):
 
@@ -341,7 +412,9 @@ class HAWC2Mann(object):
         self.box_dv = 5.6
         self.box_dw = 5.6
         self.std_scaling = array([1.0, 0.7, 0.5])
-
+        self.var = ['L', 'alfaeps', 'gamma', 'seed', 'highfrq_compensation',
+                    'box_nu', 'box_nv', 'box_nw', 'box_du', 'box_dv', 'box_dw',
+                    'turb_base_name']
 
 class HAWC2Wind(object):
 
@@ -373,6 +446,12 @@ class HAWC2Wind(object):
         self.G_phi0 = 0.0
         self.G_t0 = 0.0
         self.G_T = 0.0
+        self.var = ['density', 'wsp', 'tint', 'horizontal_input', 'shear_type',
+                    'shear_factor', 'turb_format', 'tower_shadow_method',
+                    'scale_time_start', 'wind_ramp_t0', 'wind_ramp_t1',
+                    'wind_ramp_factor0', 'wind_ramp_factor1', 'iec_gust',
+                    'iec_gust_type', 'G_A', 'G_phi0', 'G_t0', 'G_T',
+                    'wind_ramp_abs']
 
     def add_shadow(self, shadow_name):
 
@@ -408,9 +487,9 @@ class HAWC2AeroDragElement(object):
     def __init__(self):
         self.mbdy_name = ''
         self.dist = ''
-        self.nsec = 1
         self.sections = []
         self.calculation_points = 2
+        self.var = ['mbdy_name', 'dist', 'sections', 'calculation_points']
 
 
 class HAWC2OutputListVT(object):
@@ -437,7 +516,9 @@ class HAWC2OutputVT(HAWC2OutputListVT):
         self.time_stop = 0.0
         self.out_format = 'hawc_ascii'
         self.out_buffer = 1
-
+        self.res_dir = 'res'
+        self.var = ['filename', 'time_start', 'time_stop', 'out_format',
+                    'res_dir']
 
 class HAWC2Type2DLLinit(object):
 
@@ -482,7 +563,6 @@ class HAWC2Type2DLLIO(object):
         """
         io_list = []
         for i, c in enumerate(io):
-            print c
             io_list.append(len(c)*' %s' % tuple(c))
         return io_list
 
@@ -500,7 +580,6 @@ class HAWC2Type2DLL(object):
         self.deltat = 0.0            # Time between dll calls.
         self.output = HAWC2Type2DLLIO()   # Outputs for DLL specific
         self.actions = HAWC2Type2DLLIO()  # Actions for DLL specific
-        self.init_dic = {}
 
     def set_init(self, name):
         """
@@ -509,13 +588,6 @@ class HAWC2Type2DLL(object):
         """
         klass = type2_dll_dict[name]
         self.dll_init = klass()
-
-        return self.dll_init
-
-    def set_constants(self, constants):
-        for i, c in enumerate(constants):
-            setattr(self, 'constant%i' % (i + 1), c.val[1])
-            self.init_dic[i+1] = ['constant%i' % (i + 1), 1.]
 
 
 class HAWC2Type2DLLList(object):
@@ -612,7 +684,8 @@ class DTUBasicControllerVT(HAWC2Type2DLLinit):
                          45: ['overspeed_limit', 1.], 50: ['Kp2', 1.],
                          51: ['Ko1', 1.], 52: ['Ko2', 1.]}
 
-    def read_constants(self, constants):
+    def set_constants(self, constants):
+
         for i, c in enumerate(constants):
             if c.val[0] in self.init_dic.keys():
                 var_name = self.init_dic[c.val[0]][0]
@@ -698,9 +771,72 @@ class HAWC2VarTrees(object):
         self.blade_ae = HAWC2BladeGeometry()
         self.airfoildata = HAWC2AirfoilData()
         self.output = HAWC2OutputVT()
-        self.rotor = RotorVT()
         self.body_order = []
         self.main_bodies = HAWC2MainBodyList()
         self.dlls_order = []
         self.dlls = HAWC2Type2DLLList()
         self.h2s = HAWC2SVar()
+
+    def tags2var(self, case):
+        """
+        Write variable values conatained in a dictionary into the variable
+        trees.
+
+        Parameter
+        ---------
+        case: dict
+            Dictinary that has as keys tags (e.g. '[wsp]').
+        """
+        keys = case.keys()
+        for var in self.sim.var:
+            if '['+var+']' in keys:
+                try:
+                    setattr(self.sim, var, case['['+var+']'])
+                except:
+                    print 'something went wrong setting %s' % case['['+var+']']
+        self.sim.logfile = os.path.join(case['[log_dir]'],case['[Case id.]']+'.log')
+        for var in self.wind.var:
+            if '['+var+']' in keys:
+                if var == 'turb_format' and self.wind.turb_format == 0:
+                    continue
+                if var == 'wind_ramp_abs':
+                    self.wind.wind_ramp_abs = []
+                    self.wind.wind_ramp_abs.append(eval(case['['+var+']']))
+                else:
+                    setattr(self.wind, var, case['['+var+']'])
+        self.wind.windfield_rotations = \
+            array([0., 0., case['[wdir]']])
+        for var in self.aero.var:
+            if var == 'turb_format' and self.wind.turb_format == 0:
+                continue
+            if '['+var+']' in keys:
+                try:
+                    setattr(self.aero, var, case['['+var+']'])
+                except:
+                    print 'something went wrong setting %s' % case['['+var+']']
+
+        if self.wind.turb_format > 0:
+            for var in self.wind.mann.var:
+                if '['+var+']' in keys:
+                    setattr(self.wind.mann, var, case['['+var+']'])
+
+        for var in self.output.var:
+            if '['+var+']' in keys:
+                setattr(self.output, var, case['['+var+']'])
+
+        for i in self.dlls.risoe_controller.dll_init.init_dic.keys():
+            var = self.dlls.risoe_controller.dll_init.init_dic[i][0]
+            if '['+var+']' in keys:
+                setattr(self.dlls.risoe_controller.dll_init, var, case['['+var+']'])
+        try:
+            self.dlls.generator_servo.dll_init.constant7 = case['[grid_loss_time]']
+        except:
+            self.dlls.generator_servo.dll_init.constant7 = 1000
+        try:
+            self.dlls.servo_with_limits.dll_init.constant8 = case['[time_pitch_runaway]']
+        except:
+            self.dlls.servo_with_limits.dll_init.constant8 = 1000
+        try:
+            self.dlls.servo_with_limits.dll_init.constant9 = case['[Time stuck DLC22b]']
+        except:
+            self.dlls.servo_with_limits.dll_init.constant9 = 1000

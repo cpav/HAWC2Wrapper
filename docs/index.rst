@@ -9,5 +9,6 @@ Contents:
 
    overview
    usage
+   example
    srcdocs
    pkgdocs

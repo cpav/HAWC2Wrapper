@@ -2,6 +2,7 @@ import copy
 import numpy as np
 import os
 import shutil
+import pickle
 
 from openmdao.api import Component, Group, ParallelGroup
 
@@ -14,6 +15,11 @@ from hawc2_vartrees import HAWC2AirfoilData, \
                            HAWC2AirfoilDataset, \
                            HAWC2AirfoilPolar
 
+try:
+    from fatfreq import fatfreq
+except:
+    print 'Not able to import module to compute fatigue in frequency domain!'
+
 
 class HAWC2SWorkflow(Component):
     """OpenMDAO component to run the HAWC2S workflow.
@@ -22,19 +28,26 @@ class HAWC2SWorkflow(Component):
     ----------
     config: dict
         Configuration dictionary. It has to contain the following entries:
-        |* 'with_structure': bool to add structural properties to the parameters
-        |* 'with_geom': bool to add the blade geometry to the parameters
-        |* 'master_file': str with the name of the master file.
-        |* 'aerodynamic_sections': int of the number of aerodynamic sections.
-        |* 'HAWC2SOutputs': dict of the outputs required. It has to include two
-            dictionaries 'rotor' and 'blade' with the list of rotor sensor and
+
+        * 'with_structure': bool to add structural properties to the parameters
+
+        * 'with_geom': bool to add the blade geometry to the parameters
+
+        * 'master_file': str with the name of the master file.
+
+        * 'aerodynamic_sections': int of the number of aerodynamic sections.
+
+        * 'HAWC2SOutputs': dict of the outputs required. It has to include two\
+            dictionaries 'rotor' and 'blade' with the list of rotor sensor and\
             blade sensors.
 
-        |* 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter
+        * 'HAWC2SInputWriter': dict for initialization of HAWC2SInputWriter\
             parameters.
-        |* 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
-        |* 'HAWC2GeometryBuilder': dict for initialization of
-            HAWC2GeometryBuilder parameters
+
+        * 'HAWC2Wrapper': dict for initialization of HAWC2Wrapper parameters.
+
+        * 'HAWC2GeometryBuilder': dict for initialization of \
+          HAWC2GeometryBuilder parameters
 
     case_id: str
         Name of the HAWC2s case to create and run. If case_id contains the word
@@ -69,14 +82,26 @@ class HAWC2SWorkflow(Component):
         except:
             self.with_aero_coeffs = False
         self.with_ctr_tuning = 0
-        self.with_freq_placement = 0
-
+        if 'FreqDampTarget' in config.keys():
+            self.with_freq_placement = True
+        else:
+            self.with_freq_placement = False
+        if 'Fatigue' in config.keys():
+            self.with_fatigue = True
+        else:
+            self.with_fatigue = False
+            
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
 
         self.writer = HAWC2SInputWriter(**config['HAWC2SInputWriter'])
+        self.writer.data_directory = config['HAWC2SInputWriter']['data_directory']
         self.writer.vartrees = copy.copy(self.reader.vartrees)
         self.writer.case_id = case_id
+        self.writer.vartrees.aero.ae_filename = \
+            os.path.join(self.writer.data_directory, case_id+'_ae.dat')
+        self.writer.vartrees.aero.pc_filename = \
+            os.path.join(self.writer.data_directory, case_id+'_pc.dat')
         self.writer.vartrees.aero.aerosections = config['aerodynamic_sections']
 
         nws = self._check_cases(self.writer.vartrees, case_id, case)
@@ -106,7 +131,7 @@ class HAWC2SWorkflow(Component):
                 cssize = (config['structural_sections'], 19)
             self.add_param('blade_beam_structure', shape=cssize)
 
-        self.geom = HAWC2GeometryBuilder(blade_ni_span=config['structural_sections'])
+        self.geom = HAWC2GeometryBuilder(config['structural_sections'], **config['BladeGeometryBuilder'])
         self.geom.c12axis_init = self.reader.vartrees.main_bodies.blade1.c12axis.copy()
         self.geom.c12axis_init[:, :3] /= self.geom.c12axis_init[-1, 2]
         if self.with_geom:
@@ -118,6 +143,18 @@ class HAWC2SWorkflow(Component):
             self.geom.interp_from_htc = False
         else:
             self.geom.interp_from_htc = True
+
+        if self.with_freq_placement:
+            freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
+
+            self.freq = FreqDampTarget(**config['FreqDampTarget'])
+            self.add_output('freq_factor', shape=[nws, 2*freq_nf])
+
+        if self.with_fatigue:
+            self.Wind = pickle.load( open( "wind_structure.pkl", "rb" ) )
+            self.Sensors = config['Fatigue']['Sensors']
+            self.m = config['Fatigue']['m']
+            self.add_output('fatigue', shape=[nws, len(self.Sensors)])
 
         if self.with_aero_coeffs:
             self.add_param('airfoildata:blend_var', np.zeros(config['naero_coeffs']))
@@ -161,16 +198,13 @@ class HAWC2SWorkflow(Component):
 
         if self.with_structure:
             body = vt.main_bodies.blade1
-            self._array2hawc2beamstructure(blade_length, body,
-                                           params['blade_beam_structure'])
-
-        if self.with_aero_coeffs:
-            self._convert_aero_coeffs(params)
+            body.array2hawc2beamstructure(blade_length, params['blade_beam_structure'])
 
         if self.with_ctr_tuning:
             pass
-        if self.with_freq_placement:
-            pass
+
+        if self.with_aero_coeffs:
+            self._convert_aero_coeffs(params)
 
         self.writer.execute()
         self.wrapper.compute()
@@ -189,64 +223,20 @@ class HAWC2SWorkflow(Component):
             unknowns['outputs_blade_fext'] = self.output.outputs_blade_fext
         except:
             pass
+
+        if self.with_freq_placement:
+            self.freq.freqdamp = self.output.aeroelasticfreqdamp
+            self.freq.execute()
+            unknowns['freq_factor'] = self.freq.freq_factor
+
+        if self.with_fatigue:
+            NewWind = fatfreq.select_wind(self.Wind, self.output.wsp)
+            Damage, StdDev = fatfreq.FatigueFromPSD(self.output.rpm, NewWind, 
+                                                    self.Sensors, 
+                                                    self.output.cl_matrices,
+                                                    self.m)
+            unknowns['fatigue'] = Damage
         os.chdir(self.basedir)
-        # if not self.keep_work_dirs:
-        #     shutil.rmtree(workdir)
-
-    def _array2hawc2beamstructure(self, blade_length, body, body_st):
-
-        bset = body.body_set[1] - 1
-        if body.st_input_type is 0:
-            body.beam_structure[bset].s = body_st[:, 0]
-            body.beam_structure[bset].dm = body_st[:, 1]
-            body.beam_structure[bset].x_cg = body_st[:, 2]
-            body.beam_structure[bset].y_cg = body_st[:, 3]
-            body.beam_structure[bset].ri_x = body_st[:, 4]
-            body.beam_structure[bset].ri_y = body_st[:, 5]
-            body.beam_structure[bset].x_sh = body_st[:, 6]
-            body.beam_structure[bset].y_sh = body_st[:, 7]
-            body.beam_structure[bset].E = body_st[:, 8]
-            body.beam_structure[bset].G = body_st[:, 9]
-            body.beam_structure[bset].I_x = body_st[:, 10]
-            body.beam_structure[bset].I_y = body_st[:, 11]
-            body.beam_structure[bset].K = body_st[:, 12]
-            body.beam_structure[bset].k_x = body_st[:, 13]
-            body.beam_structure[bset].k_y = body_st[:, 14]
-            body.beam_structure[bset].A = body_st[:, 15]
-            body.beam_structure[bset].pitch = body_st[:, 16]
-            body.beam_structure[bset].x_e = body_st[:, 17]
-            body.beam_structure[bset].y_e = body_st[:, 18]
-        else:
-            body.beam_structure[bset].s = body_st[:, 0]
-            body.beam_structure[bset].dm = body_st[:, 1]
-            body.beam_structure[bset].x_cg = body_st[:, 2]
-            body.beam_structure[bset].y_cg = body_st[:, 3]
-            body.beam_structure[bset].ri_x = body_st[:, 4]
-            body.beam_structure[bset].ri_y = body_st[:, 5]
-            body.beam_structure[bset].pitch = body_st[:, 6]
-            body.beam_structure[bset].x_e = body_st[:, 7]
-            body.beam_structure[bset].y_e = body_st[:, 8]
-            body.beam_structure[bset].K_11 = body_st[:, 9]
-            body.beam_structure[bset].K_12 = body_st[:, 10]
-            body.beam_structure[bset].K_13 = body_st[:, 11]
-            body.beam_structure[bset].K_14 = body_st[:, 12]
-            body.beam_structure[bset].K_15 = body_st[:, 13]
-            body.beam_structure[bset].K_16 = body_st[:, 14]
-            body.beam_structure[bset].K_22 = body_st[:, 15]
-            body.beam_structure[bset].K_23 = body_st[:, 16]
-            body.beam_structure[bset].K_24 = body_st[:, 17]
-            body.beam_structure[bset].K_25 = body_st[:, 18]
-            body.beam_structure[bset].K_26 = body_st[:, 19]
-            body.beam_structure[bset].K_33 = body_st[:, 20]
-            body.beam_structure[bset].K_34 = body_st[:, 21]
-            body.beam_structure[bset].K_35 = body_st[:, 22]
-            body.beam_structure[bset].K_36 = body_st[:, 23]
-            body.beam_structure[bset].K_44 = body_st[:, 24]
-            body.beam_structure[bset].K_45 = body_st[:, 25]
-            body.beam_structure[bset].K_46 = body_st[:, 26]
-            body.beam_structure[bset].K_55 = body_st[:, 27]
-            body.beam_structure[bset].K_56 = body_st[:, 28]
-            body.beam_structure[bset].K_66 = body_st[:, 29]
 
     def _convert_aero_coeffs(self, params):
 
@@ -321,7 +311,9 @@ class OutputsAggregator(Component):
 
     config: dict
         Configuration dictionary. Requires:
+
         * 'aerodynamic_sections'. Number of aerodynamic sections.
+
         * 'HAWC2SOutputs'. Dictionary of the outputs.
 
     n_cases: int
@@ -369,6 +361,34 @@ class OutputsAggregator(Component):
                 self.sensor_fext_blade.append(sensor)
                 self.add_output(sensor, shape=[n_cases, self.nsts])
 
+        if 'FreqDampTarget' in config.keys():
+            self.with_freq_placement = True
+        else:
+            self.with_freq_placement = False
+
+        if 'Fatigue' in config.keys():
+            self.with_fatigue = True
+        else:
+            self.with_fatigue = False
+            
+        if self.with_freq_placement:
+
+            freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
+
+            for i in range(n_cases):
+                p_name = 'freq_factor_%d' % i
+                self.add_param(p_name, shape=[1, 2*freq_nf])
+
+            self.add_output('freq_factor', shape=[n_cases, 2*freq_nf])
+
+        if self.with_fatigue:
+            ns = len(config['Fatigue']['Sensors'])
+            for i in range(n_cases):
+                p_name = 'fatigue_%d' % i
+                self.add_param(p_name, shape=[1, ns])
+
+            self.add_output('fatigue', shape=[n_cases, ns])
+
     def solve_nonlinear(self, params, unknowns, resids):
 
         for j, sensor in enumerate(self.sensor_rotor):
@@ -387,6 +407,16 @@ class OutputsAggregator(Component):
                 out = params[p_name]
                 unknowns[sensor][i, :] = out[0, j*self.nsts:(j+1)*self.nsts]
 
+        if self.with_freq_placement:
+            for i in range(self.n_cases):
+                p_name = 'freq_factor_%d' % i
+                unknowns['freq_factor'][i, :] = params[p_name][0, :]
+
+        if self.with_fatigue:
+            for i in range(self.n_cases):
+                p_name = 'fatigue_%d' % i
+                unknowns['fatigue'][i, :] = params[p_name][0, :]
+
         fid = open('Rotor_loads.dat', 'w')
         fmt = '#'+'%23s '+(len(self.sensor_rotor)-1)*'%24s '+'\n'
         fid.write(fmt % tuple(self.sensor_rotor))
@@ -401,21 +431,22 @@ class HAWC2SAeroElasticSolver(Group):
     """
     OpenMDAO group to execute HAWC2s in parallel.
 
-    parameters
-    -----------
+    Parameters
+    ----------
     config: dict
         Configuration dictionary.
+
     """
     def __init__(self, config, cssize=None, pfsize=None):
         super(HAWC2SAeroElasticSolver, self).__init__()
 
-        if cssize != None:
-             print 'Warning: cssize should be set in config["structural_sections"]'
-             config['structural_sections'] = cssize
+        if cssize is not None:
+            print 'Warning: cssize should be set in config["structural_sections"]'
+            config['structural_sections'] = cssize
 
-        if pfsize != None:
-             print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
-             config['aerodynamic_sections'] = pfsize
+        if pfsize is not None:
+            print 'Warning: pfsize should be set in config["aerodynamic_sections"]'
+            config['aerodynamic_sections'] = pfsize
 
         # check that the config is ok
         self._check_config(config)
@@ -426,6 +457,9 @@ class HAWC2SAeroElasticSolver(Group):
             name = 'wsp_%2.2f' % ws
             cases[name.replace('.', '_')] = ws
             cases_list.append(name.replace('.', '_'))
+
+        if not isinstance(config['cases']['user'], list):
+            print "Error! config['cases']['user'] has to be a list of dictionaries"
         for icase, case in enumerate(config['cases']['user']):
             name = 'user_%i' % icase
             cases[name] = case
@@ -444,6 +478,7 @@ class HAWC2SAeroElasticSolver(Group):
             for v in var:
                 promote.append(v)
             promote.append('blade_length')
+
         if 'with_aero_coeffs' in config.keys():
             if config['with_aero_coeffs']:
                 promote.append('airfoildata:blend_var')
@@ -458,6 +493,10 @@ class HAWC2SAeroElasticSolver(Group):
         promotions = config['HAWC2SOutputs']['blade'] + config['HAWC2SOutputs']['rotor']
         if config['with_sectional_forces']:
             promotions += ['Fx_e', 'Fy_e', 'Fz_e', 'Mx_e', 'My_e', 'Mz_e']
+        if 'FreqDampTarget' in config.keys():
+            promotions += ['freq_factor']
+        if 'Fatigue' in config.keys():
+            promotions += ['fatigue']
         self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
@@ -471,12 +510,21 @@ class HAWC2SAeroElasticSolver(Group):
                          'aggregate.outputs_blade_%d' % i)
             self.connect('pg.%s.outputs_blade_fext' % case_id,
                          'aggregate.outputs_blade_fext_%d' % i)
-
+            if 'FreqDampTarget' in config.keys():
+                self.connect('pg.%s.freq_factor' % case_id,
+                             'aggregate.freq_factor_%d' % i)
+            if 'Fatigue' in config.keys():
+                self.connect('pg.%s.fatigue' % case_id,
+                             'aggregate.fatigue_%d' % i)
+                             
     def _check_config(self, config):
 
         if 'master_file' not in config.keys():
             raise RuntimeError('You need to supply the name of the master' +
                                'file in the configuration dictionary.')
+
+        if 'BladeGeometryBuilder' not in config.keys():
+            config['BladeGeometryBuilder'] = {}
 
         if 'HAWC2Wrapper' not in config.keys():
             raise RuntimeError('You need to supply a config dict' +
@@ -527,6 +575,8 @@ class HAWC2SAeroElasticSolver(Group):
             config['HAWC2SOutputs']['rotor'] = ['wsp', 'pitch', 'P', 'T']
             config['HAWC2SOutputs']['blade'] = ['aoa', 'cl', 'Fn']
 
+        if 'data_directory' not in config['HAWC2SInputWriter'].keys():
+            config['HAWC2SInputWriter']['data_directory'] = 'data'
 
 if __name__ == '__main__':
 

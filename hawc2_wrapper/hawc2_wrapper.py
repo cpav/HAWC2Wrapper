@@ -22,7 +22,7 @@ class HAWC2Wrapper(object):
     It only executes the codes and checks the log files. It does not read any
     result file.
 
-    parameters
+    Parameters
     ----------
     hawc2bin: str
         Name of the executable to run. The executable can be an HAWC2,
@@ -43,8 +43,19 @@ class HAWC2Wrapper(object):
         Name of folder where to copy the results and model
     dry_run: bool
         Flag to skip the execution.
-    returns
+
+    Returns
     -------
+        The class does not return or create anything.
+
+    Example
+    -------
+    >>> from hawc2_wrapper import HAWC2Wrapper
+    >>> executer = HAWC2Wrapper()
+    >>> executer.hawc2bin = 'HAWC2s.exe'
+    >>> executer.case_id = 'new_file_h2s'
+    >>> executer.execute()
+
     """
 
     def __init__(self, **kwargs):
@@ -62,8 +73,10 @@ class HAWC2Wrapper(object):
         self.copyback_results = True
         self.copyback_results_dir = 'res_copy'
 
+        self.verbose = True
+
         self.dry_run = False
-        self.timeout = 600
+        self.timeout = 1000
 
         self.basedir = os.getcwd()
 
@@ -75,7 +88,7 @@ class HAWC2Wrapper(object):
 
     def compute(self):
 
-        print 'executing %s for case:  %s.' % (self.hawc2bin, self.case_id)
+        if self.verbose: print 'executing %s for case:  %s.' % (self.hawc2bin, self.case_id)
 
         tt = time.time()
 
@@ -90,18 +103,18 @@ class HAWC2Wrapper(object):
         exec_str.append(self.case_id+'.htc')
 
         if not self.dry_run:
-            print exec_str
             try:
                 if _with_timeout:
-                    proc = subprocess.check_output(exec_str, timeout=self.timeout)
+                    proc = subprocess.check_output(exec_str,
+                                                   timeout=self.timeout)
                 else:
                     proc = subprocess.check_output(exec_str)
                 self.success = True
-                print self.hawc2bin, 'output:'
-                print proc
+                if self.verbose: print self.hawc2bin, 'output:'
+                if self.verbose: print proc
             except:
                 self.success = False
-                print self.hawc2bin, ' crashed for case %s'%self.case_id
+                print self.hawc2bin, ' crashed for case %s' % self.case_id
         else:
             print self.hawc2bin + ' dry run...'
             self.success = True
@@ -110,12 +123,16 @@ class HAWC2Wrapper(object):
             self.check_log(['Error', 'iterations exceeded'])
 
         elif 'hawc2mb' in self.hawc2bin.lower():
-            self.check_log(['Error'])
+            try:
+                self.check_log(['Error'])
+            except:
+                print 'no log file found for case %s ...' % self.case_id
 
         if self.copyback_results:
             self.copy_results()
 
-        print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id, time.time() - tt)
+        if self.verbose: print 'HAWC2Wrapper simulation time for case %s: %f' % (self.case_id,
+                                                                time.time()-tt)
 
     def copy_results(self):
         """
@@ -136,7 +153,7 @@ class HAWC2Wrapper(object):
             try:
                 shutil.copy(filename, results_dir)
             except:
-                print 'failed copying back file "%s" into %s' %\
+                if self.verbose: print 'failed copying back file "%s" into %s' %\
                                      (filename, results_dir)
 
         # copy data directory in folder
