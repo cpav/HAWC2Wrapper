@@ -57,10 +57,13 @@ class HAWC2OutputBase(object):
         self.no_bins = config['no_bins']
         self.neq = config['neq']
         self.m = config['m']
+        self.Nx_envelope = config['Nx']
         if 'ch_envelope' not in config.keys():
             self.ch_envelope = []
+            self.Nch_env = 0
         else:
             self.ch_envelope = config['ch_envelope']
+            self.Nch_env = len(config['ch_envelope'])
 
     def execute(self, case_tags):
 
@@ -75,7 +78,8 @@ class HAWC2OutputBase(object):
                                                  neq=self.neq,
                                                  m=self.m))
         if self.ch_envelope != []:
-            self.envelope = case.compute_envelope(case.sig, self.ch_envelope)
+            self.envelope = case.compute_envelope(case.sig, self.ch_envelope,
+                                            int_env=True, Nx=self.Nx_envelope)
         else:
             self.envelope = {}
 
@@ -119,6 +123,7 @@ class HAWC2OutputCompact(HAWC2OutputBase):
 
         self.outputs_statistics = np.zeros([self.Nstat, self.Nch])
         self.outputs_fatigue = np.zeros([len(self.m), self.Nch])
+        self.outputs_envelope = np.zeros([self.Nx_envelope+1, self.Nch_env*6])
 
         for ich, ch in enumerate(self.channel):
             self.outputs_statistics[:, ich] = \
@@ -126,8 +131,9 @@ class HAWC2OutputCompact(HAWC2OutputBase):
             self.outputs_fatigue[:, ich] = \
                 np.array(self.eq[self.ch_dict[ch]['chi']])
 
-        for ch in self.ch_envelope:
-            setattr(self, 'env_'+ch[0].replace('-', '_'), np.array(self.envelope[ch[0]]))
+        for ich, ch in enumerate(self.ch_envelope):
+            self.outputs_envelope[:, 6*ich:6*(ich+1)] = \
+                                        np.array(np.array(self.envelope[ch[0]]))
 
 
 class HAWC2SOutputBase(object):
