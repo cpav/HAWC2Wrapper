@@ -230,7 +230,7 @@ class HAWC2MainBody(object):
         self.orientations = []
         self.constraints = []
         self.var = ['body_name', 'body_type', 'st_input_type',
-                    'body_set', 'nbodies', 'node_distribution', 
+                    'body_set', 'nbodies', 'node_distribution',
                     'damping_posdef', 'damping_aniso','concentrated_mass']
 
     def add_orientation(self, orientation):
@@ -361,7 +361,7 @@ class HAWC2MainBodyList(object):
 class HAWC2Simulation(object):
 
     def __init__(self):
-        self.time_stop = 300.  
+        self.time_stop = 300.
         self.solvertype = 1
         self.convergence_limits = [1.0e3, 1.0, 0.7]
         self.on_no_convergence = 'continue'
@@ -390,8 +390,8 @@ class HAWC2Aero(object):
         self.pc_filename = ''
         self.aero_distribution_file = ''
         self.aero_distribution_set = 1
-        self.var = ['nblades', 'hub_vec_coo', 'induction_method', 
-                    'aerocalc_method', 'aerosections', 'tiploss_method', 
+        self.var = ['nblades', 'hub_vec_coo', 'induction_method',
+                    'aerocalc_method', 'aerosections', 'tiploss_method',
                     'dynstall_method', 'ae_filename', 'pc_filename']
 
 class HAWC2Mann(object):
@@ -781,19 +781,24 @@ class HAWC2VarTrees(object):
         """
         Write variable values conatained in a dictionary into the variable
         trees.
-        
+
         Parameter
         ---------
         case: dict
-            Dictinary that has as keys tags (e.g. '[wsp]'). 
+            Dictinary that has as keys tags (e.g. '[wsp]').
         """
         keys = case.keys()
         for var in self.sim.var:
             if '['+var+']' in keys:
-                setattr(self.sim, var, case['['+var+']'])
+                try:
+                    setattr(self.sim, var, case['['+var+']'])
+                except:
+                    print 'something went wrong setting %s' % case['['+var+']']
         self.sim.logfile = os.path.join(case['[log_dir]'],case['[Case id.]']+'.log')
         for var in self.wind.var:
             if '['+var+']' in keys:
+                if var == 'turb_format' and self.wind.turb_format == 0:
+                    continue
                 if var == 'wind_ramp_abs':
                     self.wind.wind_ramp_abs = []
                     self.wind.wind_ramp_abs.append(eval(case['['+var+']']))
@@ -802,11 +807,19 @@ class HAWC2VarTrees(object):
         self.wind.windfield_rotations = \
             array([0., 0., case['[wdir]']])
         for var in self.aero.var:
+            if var == 'turb_format' and self.wind.turb_format == 0:
+                continue
             if '['+var+']' in keys:
-                setattr(self.aero, var, case['['+var+']'])
-        for var in self.wind.mann.var:
-            if '['+var+']' in keys:
-                setattr(self.wind.mann, var, case['['+var+']'])
+                try:
+                    setattr(self.aero, var, case['['+var+']'])
+                except:
+                    print 'something went wrong setting %s' % case['['+var+']']
+
+        if self.wind.turb_format > 0:
+            for var in self.wind.mann.var:
+                if '['+var+']' in keys:
+                    setattr(self.wind.mann, var, case['['+var+']'])
+
         for var in self.output.var:
             if '['+var+']' in keys:
                 setattr(self.output, var, case['['+var+']'])
@@ -817,14 +830,13 @@ class HAWC2VarTrees(object):
                 setattr(self.dlls.risoe_controller.dll_init, var, case['['+var+']'])
         try:
             self.dlls.generator_servo.dll_init.constant7 = case['[grid_loss_time]']
-        except: 
+        except:
             self.dlls.generator_servo.dll_init.constant7 = 1000
         try:
             self.dlls.servo_with_limits.dll_init.constant8 = case['[time_pitch_runaway]']
-        except: 
+        except:
             self.dlls.servo_with_limits.dll_init.constant8 = 1000
         try:
             self.dlls.servo_with_limits.dll_init.constant9 = case['[Time stuck DLC22b]']
-        except: 
+        except:
             self.dlls.servo_with_limits.dll_init.constant9 = 1000
-

@@ -123,7 +123,10 @@ class HAWC2Wrapper(object):
             self.check_log(['Error', 'iterations exceeded'])
 
         elif 'hawc2mb' in self.hawc2bin.lower():
-            self.check_log(['Error'])
+            try:
+                self.check_log(['Error'])
+            except:
+                print 'no log file found for case %s ...' % self.case_id
 
         if self.copyback_results:
             self.copy_results()
