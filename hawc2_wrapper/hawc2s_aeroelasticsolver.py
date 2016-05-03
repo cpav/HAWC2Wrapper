@@ -395,8 +395,8 @@ class HAWC2SAeroElasticSolver(Group):
     """
     OpenMDAO group to execute HAWC2s in parallel.
 
-    parameters
-    -----------
+    Parameters
+    ----------
     config: dict
         Configuration dictionary.
 
