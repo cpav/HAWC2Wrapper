@@ -85,7 +85,7 @@ class HAWC2Workflow(Component):
                                                      self.output.Nch])
         self.add_output('outputs_fatigue', shape=[len(self.output.m),
                                                   self.output.Nch])
-                                                  
+
         if 'ch_envelope' in config['HAWC2Outputs'].keys():
             self.add_output('outputs_envelope', shape=[config['HAWC2Outputs']\
                                                 ['Nx']+1,self.output.Nch_env*6])
@@ -158,10 +158,10 @@ class HAWC2Workflow(Component):
         if self.wrapper.success and not self.output.dry_run:
             self.output.execute(self.case)
 
-        unknowns['outputs_statistics'] = self.output.outputs_statistics
-        unknowns['outputs_fatigue'] = self.output.outputs_fatigue
-        if self.ch_envelope != []:
-            unknowns['outputs_envelope'] = self.output.outputs_envelope
+            unknowns['outputs_statistics'] = self.output.outputs_statistics
+            unknowns['outputs_fatigue'] = self.output.outputs_fatigue
+            if self.output.ch_envelope != []:
+                unknowns['outputs_envelope'] = self.output.outputs_envelope
 
         os.chdir(self.basedir)
 
@@ -199,8 +199,8 @@ class OutputsAggregator(Component):
             self.Nrblades = config['HAWC2Outputs']['nr_blades_out']
             self.Nch_env = len(config['HAWC2Outputs']['ch_envelope'])
         else:
-            self.ch_envelope = []                      
-            
+            self.ch_envelope = []
+
         # Initialize to get all the required constants
         Nch = len(config['HAWC2Outputs']['channels'])
         m = config['HAWC2Outputs']['m']
@@ -232,7 +232,7 @@ class OutputsAggregator(Component):
             name = 'fatigue_m%i' % im
             self.fatigue_var.append(name)
             self.add_output(name, shape=[n_cases, Nch])
-        
+
         if self.ch_envelope != []:
             self.envelope_var = []
             for isec in range(nsec):
@@ -253,8 +253,8 @@ class OutputsAggregator(Component):
                 p_name = 'outputs_fatigue_%d' % i
                 out = params[p_name]
                 unknowns[var][i, :] = out[j, :]
-                
-        if self.ch_envelope != []:       
+
+        if self.ch_envelope != []:
             for j, var in enumerate(self.envelope_var):
                 p_list = []
                 envelope_cloud = {}
@@ -269,7 +269,7 @@ class OutputsAggregator(Component):
                 Simulations.compute_env_of_env(envelope_cloud,p_list,
                                                Nx=(self.Nx_envelope+1)*self.Nrblades-1,
                                                Nsectors=self.Nsectors_env)
-            
+
 
 
 class HAWC2AeroElasticSolver(Group):
