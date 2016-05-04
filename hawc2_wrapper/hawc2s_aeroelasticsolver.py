@@ -90,7 +90,7 @@ class HAWC2SWorkflow(Component):
             self.with_fatigue = True
         else:
             self.with_fatigue = False
-            
+
         self.reader = HAWC2InputReader(config['master_file'])
         self.reader.execute()
 
@@ -231,8 +231,8 @@ class HAWC2SWorkflow(Component):
 
         if self.with_fatigue:
             NewWind = fatfreq.select_wind(self.Wind, self.output.wsp)
-            Damage, StdDev = fatfreq.FatigueFromPSD(self.output.rpm, NewWind, 
-                                                    self.Sensors, 
+            Damage, StdDev = fatfreq.FatigueFromPSD(self.output.rpm, NewWind,
+                                                    self.Sensors,
                                                     self.output.cl_matrices,
                                                     self.m)
             unknowns['fatigue'] = Damage
@@ -370,7 +370,7 @@ class OutputsAggregator(Component):
             self.with_fatigue = True
         else:
             self.with_fatigue = False
-            
+
         if self.with_freq_placement:
 
             freq_nf = config['FreqDampTarget']['mode_freq'].shape[1]-1
@@ -484,9 +484,9 @@ class HAWC2SAeroElasticSolver(Group):
                 promote.append('airfoildata:blend_var')
                 for i in range(config['naero_coeffs']):
                     promote.extend(['airfoildata:aoa%02d' % i,
-                                   'airfoildata:cl%02d' % i,
-                                   'airfoildata:cd%02d' % i,
-                                   'airfoildata:cm%02d' % i])
+                                    'airfoildata:cl%02d' % i,
+                                    'airfoildata:cd%02d' % i,
+                                    'airfoildata:cm%02d' % i])
 
         # these should be converted to FUSED-Wind variables
         # but we'll just promote them for now
@@ -497,7 +497,10 @@ class HAWC2SAeroElasticSolver(Group):
             promotions += ['freq_factor']
         if 'Fatigue' in config.keys():
             promotions += ['fatigue']
-        self.add('aggregate', OutputsAggregator(config, len(cases_list)), promotes=promotions)
+
+        self.add('aggregate', OutputsAggregator(config, len(cases_list)),
+                 promotes=promotions)
+
         pg = self.add('pg', ParallelGroup(), promotes=promote)
 
         for i, case_id in enumerate(cases_list):
@@ -516,7 +519,7 @@ class HAWC2SAeroElasticSolver(Group):
             if 'Fatigue' in config.keys():
                 self.connect('pg.%s.fatigue' % case_id,
                              'aggregate.fatigue_%d' % i)
-                             
+
     def _check_config(self, config):
 
         if 'master_file' not in config.keys():

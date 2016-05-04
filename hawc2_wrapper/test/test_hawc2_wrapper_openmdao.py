@@ -10,7 +10,7 @@ if MPI:
 else:
     from openmdao.core.basic_impl import BasicImpl as impl
 
-
+from hawc2_wrapper.hawc2_inputwriter import HAWC2InputWriter
 from hawc2_wrapper.hawc2_aeroelasticsolver import HAWC2AeroElasticSolver
 from hawc2_wrapper.hawc2s_aeroelasticsolver import HAWC2SAeroElasticSolver
 
@@ -21,6 +21,10 @@ root = top.root
 root.ln_solver = LinearGaussSeidel()
 
 config = {}
+
+config['with_aero_coeffs'] = True
+config['naero_coeffs'] = 6
+config['naoa'] = 105
 
 # HAWC2GeometryBuilder
 cf = {}
@@ -98,7 +102,18 @@ if H2:
 else:
     root.add('loads', HAWC2SAeroElasticSolver(config), promotes=['*'])
 
+if config['with_aero_coeffs']:
 
+    a = HAWC2InputReader()
+    a.htc_master_file = 'main_hs2.htc'
+    a.execute()
+    vts = a.vartrees
+    prob['hs2.airfoildata:blend_var'] = vts.airfoildata.pc_sets[0].rthick
+    for i in range(config['naero_coeffs']):
+        prob['loads.airfoildata:aoa%02d'%i] = vts.airfoildata.pc_sets[0].polars[i].aoa
+        prob['loads.airfoildata:cl%02d'%i] = vts.airfoildata.pc_sets[0].polars[i].cl
+        prob['loads.airfoildata:cd%02d'%i] = vts.airfoildata.pc_sets[0].polars[i].cd
+        prob['loads.airfoildata:cm%02d'%i] = vts.airfoildata.pc_sets[0].polars[i].cm
 
 top.setup()
 
