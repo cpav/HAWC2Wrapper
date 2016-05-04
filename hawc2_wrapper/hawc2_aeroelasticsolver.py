@@ -160,7 +160,8 @@ class HAWC2Workflow(Component):
 
         unknowns['outputs_statistics'] = self.output.outputs_statistics
         unknowns['outputs_fatigue'] = self.output.outputs_fatigue
-        unknowns['outputs_envelope'] = self.output.outputs_envelope
+        if self.ch_envelope != []:
+            unknowns['outputs_envelope'] = self.output.outputs_envelope
 
         os.chdir(self.basedir)
 
@@ -191,12 +192,15 @@ class OutputsAggregator(Component):
         self.n_cases = n_cases
         self.naes = config['aerodynamic_sections']-2
         self.channel = config['HAWC2Outputs']['channels']
-        self.ch_envelope = config['HAWC2Outputs']['ch_envelope']
-        self.Nx_envelope = config['HAWC2Outputs']['Nx']
-        self.Nsectors_env = config['HAWC2Outputs']['Nsectors']
-        self.Nrblades = config['HAWC2Outputs']['nr_blades_out']
-        self.Nch_env = len(config['HAWC2Outputs']['ch_envelope'])
-        
+        if 'ch_envelope' in config['HAWC2Outputs'].keys():
+            self.ch_envelope = config['HAWC2Outputs']['ch_envelope']
+            self.Nx_envelope = config['HAWC2Outputs']['Nx']
+            self.Nsectors_env = config['HAWC2Outputs']['Nsectors']
+            self.Nrblades = config['HAWC2Outputs']['nr_blades_out']
+            self.Nch_env = len(config['HAWC2Outputs']['ch_envelope'])
+        else:
+            self.ch_envelope = []                      
+            
         # Initialize to get all the required constants
         Nch = len(config['HAWC2Outputs']['channels'])
         m = config['HAWC2Outputs']['m']
@@ -211,9 +215,10 @@ class OutputsAggregator(Component):
         for i in range(n_cases):
             p_name = 'outputs_fatigue_%d' % i
             self.add_param(p_name, shape=[len(m), Nch])
-        for i in range(n_cases):
-            p_name = 'outputs_envelope_%d' % i
-            self.add_param(p_name, shape=[self.Nx_envelope+1, self.Nch_env*6])
+        if self.ch_envelope != []:
+            for i in range(n_cases):
+                p_name = 'outputs_envelope_%d' % i
+                self.add_param(p_name, shape=[self.Nx_envelope+1, self.Nch_env*6])
 
         # Add outputs
         self.stat_var = []
@@ -227,12 +232,13 @@ class OutputsAggregator(Component):
             name = 'fatigue_m%i' % im
             self.fatigue_var.append(name)
             self.add_output(name, shape=[n_cases, Nch])
-            
-        self.envelope_var = []
-        for isec in range(nsec):
-            name = 'envelope_sec%i' % isec
-            self.envelope_var.append(name)
-            self.add_output(name, shape=[self.Nsectors_env, 6])
+        
+        if self.ch_envelope != []:
+            self.envelope_var = []
+            for isec in range(nsec):
+                name = 'envelope_sec%i' % isec
+                self.envelope_var.append(name)
+                self.add_output(name, shape=[self.Nsectors_env, 6])
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -248,20 +254,21 @@ class OutputsAggregator(Component):
                 out = params[p_name]
                 unknowns[var][i, :] = out[j, :]
                 
-        for j, var in enumerate(self.envelope_var):
-            p_list = []
-            envelope_cloud = {}
-            for i in range(self.n_cases):
-                p_name = 'outputs_envelope_%d' % i
-                p_list.append(p_name)
-                out = params[p_name]
-                cloud = out[:,6*self.Nrblades*j:6*self.Nrblades*(j+1)]
-                envelope_cloud[p_name] = \
-                         cloud.reshape([(self.Nx_envelope+1)*self.Nrblades,6])
-            unknowns[var] = \
-            Simulations.compute_env_of_env(envelope_cloud,p_list,
-                                           Nx=(self.Nx_envelope+1)*self.Nrblades-1,
-                                           Nsectors=self.Nsectors_env)
+        if self.ch_envelope != []:       
+            for j, var in enumerate(self.envelope_var):
+                p_list = []
+                envelope_cloud = {}
+                for i in range(self.n_cases):
+                    p_name = 'outputs_envelope_%d' % i
+                    p_list.append(p_name)
+                    out = params[p_name]
+                    cloud = out[:,6*self.Nrblades*j:6*self.Nrblades*(j+1)]
+                    envelope_cloud[p_name] = \
+                             cloud.reshape([(self.Nx_envelope+1)*self.Nrblades,6])
+                unknowns[var] = \
+                Simulations.compute_env_of_env(envelope_cloud,p_list,
+                                               Nx=(self.Nx_envelope+1)*self.Nrblades-1,
+                                               Nsectors=self.Nsectors_env)
             
 
 
@@ -397,16 +404,17 @@ class HAWC2AeroElasticSolver(Group):
             config['HAWC2Outputs']['stat_list'] = ['std', 'rms', 'min', 'int',
                                                    'max', 'range', 'absmax',
                                                    'mean']
-        if 'Nx_envelope' not in config['HAWC2Outputs'].keys():
-            config['HAWC2Outputs']['Nx'] = 300
-        if 'Nsectors' not in config['HAWC2Outputs'].keys():
-            config['HAWC2Outputs']['Nsectors'] = 12
-            print 'No sectors number defined for load envelope, proceeding' +\
-                  'with the default value of 12 (30deg sector).'
-        if 'nr_blades_out' not in config['HAWC2Outputs'].keys():
-            config['HAWC2Outputs']['nr_blades_out'] = 1
-            print 'No number of blades defined for output analysis, proceeding' +\
-                  'with one blade output analysis.'
+        if 'ch_envelope' in config['HAWC2Outputs'].keys():
+            if 'Nx_envelope' not in config['HAWC2Outputs'].keys():
+                config['HAWC2Outputs']['Nx'] = 300
+            if 'Nsectors' not in config['HAWC2Outputs'].keys():
+                config['HAWC2Outputs']['Nsectors'] = 12
+                print 'No sectors number defined for load envelope, proceeding' +\
+                      'with the default value of 12 (30deg sector).'
+            if 'nr_blades_out' not in config['HAWC2Outputs'].keys():
+                config['HAWC2Outputs']['nr_blades_out'] = 1
+                print 'No number of blades defined for output analysis, proceeding' +\
+                      'with one blade output analysis.'
         if 'data_directory' not in config['HAWC2InputWriter'].keys():
             config['HAWC2InputWriter']['data_directory'] = 'data'
         if 'turb_directory' not in config['HAWC2InputWriter'].keys():
