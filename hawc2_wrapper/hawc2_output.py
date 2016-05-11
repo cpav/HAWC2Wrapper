@@ -59,8 +59,6 @@ class HAWC2OutputBase(object):
         self.m = config['m']
         if 'ch_envelope' not in config.keys():
             self.ch_envelope = []
-            self.Nch_env = 0
-            self.Nx_envelope = 0
         else:
             self.ch_envelope = config['ch_envelope']
             self.Nch_env = len(config['ch_envelope'])
@@ -125,18 +123,17 @@ class HAWC2OutputCompact(HAWC2OutputBase):
         self.outputs_statistics = np.zeros([self.Nstat, self.Nch])
         self.outputs_fatigue = np.zeros([len(self.m), self.Nch])
 
-
         for ich, ch in enumerate(self.channel):
             self.outputs_statistics[:, ich] = \
                 np.array([self.stats[s][self.ch_dict[ch]['chi']] for s in self.stat_list])
             self.outputs_fatigue[:, ich] = \
                 np.array(self.eq[self.ch_dict[ch]['chi']])
-
-        if self.Nch_env > 0:
+        
+        if self.ch_envelope != []:
             self.outputs_envelope = np.zeros([self.Nx_envelope+1, self.Nch_env*6])
             for ich, ch in enumerate(self.ch_envelope):
                 self.outputs_envelope[:, 6*ich:6*(ich+1)] = \
-                                            np.array(np.array(self.envelope[ch[0]]))
+                                        np.array(np.array(self.envelope[ch[0]]))
 
 
 class HAWC2SOutputBase(object):

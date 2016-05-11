@@ -464,8 +464,8 @@ class HAWC2InputReader(object):
     def _add_hawcstab2(self, section):
 
         dll = HAWC2Type2DLL()
-        dll.set_init('risoe_controller')
-        self.vartrees.dlls.add_dll('risoe_controller', dll)
+        dll.set_init('dtu_we_controller')
+        self.vartrees.dlls.add_dll('dtu_we_controller', dll)
         for sec in section.entries:
             if sec.name == 'ground_fixed_substructure':
                 self.vartrees.h2s.ground_fixed = self._add_hawc2s_body(sec)
@@ -547,7 +547,7 @@ class HAWC2InputReader(object):
 
             elif sec.name == 'basic_dtu_we_controller':
                 self.vartrees.h2s.commands.append('basic_dtu_we_controller')
-                dll_init = self.vartrees.dlls.risoe_controller.dll_init
+                dll_init = self.vartrees.dlls.dtu_we_controller.dll_init
                 dll_init.pgTorque = sec.val[0]
                 dll_init.igTorque = sec.val[1]
                 dll_init.Qg = sec.val[2]
@@ -623,31 +623,31 @@ class HAWC2InputReader(object):
     def _add_operational_data(self, section):
 
         c = section.get_entry('windspeed')
-        self.vartrees.dlls.risoe_controller.dll_init.Vin = c[0]
-        self.vartrees.dlls.risoe_controller.dll_init.Vout = c[1]
-        self.vartrees.dlls.risoe_controller.dll_init.nV = c[2]
+        self.vartrees.dlls.dtu_we_controller.dll_init.Vin = c[0]
+        self.vartrees.dlls.dtu_we_controller.dll_init.Vout = c[1]
+        self.vartrees.dlls.dtu_we_controller.dll_init.nV = c[2]
         c = section.get_entry('genspeed')
-        self.vartrees.dlls.risoe_controller.dll_init.minRPM = c[0]
-        self.vartrees.dlls.risoe_controller.dll_init.maxRPM = c[1]
+        self.vartrees.dlls.dtu_we_controller.dll_init.minRPM = c[0]
+        self.vartrees.dlls.dtu_we_controller.dll_init.maxRPM = c[1]
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'ratedAeroPower', h2name='maxpow')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'designTSR', h2name='opt_lambda')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'minPitch', h2name='minpitch')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'gearRatio', h2name='gearratio')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'prvs_turbine')
 
         self.vartrees.h2s.options = \
@@ -661,22 +661,22 @@ class HAWC2InputReader(object):
     def _add_controller_tuning(self, section):
 
         c = section.get_entry('partial_load')
-        self.vartrees.dlls.risoe_controller.dll_init.poleFreqTorque = c[0]
-        self.vartrees.dlls.risoe_controller.dll_init.poleDampTorque = c[1]
+        self.vartrees.dlls.dtu_we_controller.dll_init.poleFreqTorque = c[0]
+        self.vartrees.dlls.dtu_we_controller.dll_init.poleDampTorque = c[1]
         c = section.get_entry('full_load')
-        self.vartrees.dlls.risoe_controller.dll_init.poleFreqPitch = c[0]
-        self.vartrees.dlls.risoe_controller.dll_init.poleDampPitch = c[1]
+        self.vartrees.dlls.dtu_we_controller.dll_init.poleFreqPitch = c[0]
+        self.vartrees.dlls.dtu_we_controller.dll_init.poleDampPitch = c[1]
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'gainScheduling', h2name='gain_scheduling')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'generatorSwitch', h2name='constant_power')
 
-        self.vartrees.dlls.risoe_controller.dll_init = \
-            self.set_entry(self.vartrees.dlls.risoe_controller.dll_init,
+        self.vartrees.dlls.dtu_we_controller.dll_init = \
+            self.set_entry(self.vartrees.dlls.dtu_we_controller.dll_init,
                            section, 'rotorspeed_gs', h2name='rotorspeed_gs')
 
         self.vartrees.h2s.options = \

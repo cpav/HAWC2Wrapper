@@ -63,7 +63,7 @@ class HAWC2Wrapper(object):
 
         self.hawc2bin = 'hawc2MB.exe'
         self.wine_cmd = 'wine'
-
+       
         self.case_id = 'hawc2_case'
 
         self.data_directory = 'data'

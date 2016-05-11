@@ -145,7 +145,7 @@ class HAWC2Workflow(Component):
 
         vt = self.writer.vartrees
         if self.with_tsr:
-            vt.dlls.risoe_controller.dll_init.designTSR = \
+            vt.dlls.dtu_we_controller.dll_init.designTSR = \
                 params['tsr']
 
         if self.with_geom:
