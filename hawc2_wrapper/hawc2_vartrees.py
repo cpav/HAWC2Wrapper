@@ -698,7 +698,7 @@ class DTUBasicControllerVT(HAWC2Type2DLLinit):
                 self.init_dic[i+1] = ['constant%i' % (i + 1), 1.]
 
 
-type2_dll_dict = {'risoe_controller': DTUBasicControllerVT,
+type2_dll_dict = {'dtu_we_controller': DTUBasicControllerVT,
                   'generator_servo': HAWC2Type2DLLinit,
                   'mech_brake': HAWC2Type2DLLinit,
                   'servo_with_limits': HAWC2Type2DLLinit,
@@ -824,10 +824,10 @@ class HAWC2VarTrees(object):
             if '['+var+']' in keys:
                 setattr(self.output, var, case['['+var+']'])
 
-        for i in self.dlls.risoe_controller.dll_init.init_dic.keys():
-            var = self.dlls.risoe_controller.dll_init.init_dic[i][0]
+        for i in self.dlls.dtu_we_controller.dll_init.init_dic.keys():
+            var = self.dlls.dtu_we_controller.dll_init.init_dic[i][0]
             if '['+var+']' in keys:
-                setattr(self.dlls.risoe_controller.dll_init, var, case['['+var+']'])
+                setattr(self.dlls.dtu_we_controller.dll_init, var, case['['+var+']'])
         try:
             self.dlls.generator_servo.dll_init.constant7 = case['[grid_loss_time]']
         except:

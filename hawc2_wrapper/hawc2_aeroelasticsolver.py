@@ -128,7 +128,7 @@ class HAWC2Workflow(Component):
 
         vt = self.writer.vartrees
         if self.with_tsr:
-            vt.dlls.risoe_controller.dll_init.designTSR = \
+            vt.dlls.dtu_we_controller.dll_init.designTSR = \
                 params['tsr']
 
         if self.with_geom:
@@ -160,7 +160,7 @@ class HAWC2Workflow(Component):
 
         unknowns['outputs_statistics'] = self.output.outputs_statistics
         unknowns['outputs_fatigue'] = self.output.outputs_fatigue
-        if self.ch_envelope != []:
+        if self.output.ch_envelope != []:
             unknowns['outputs_envelope'] = self.output.outputs_envelope
 
         os.chdir(self.basedir)

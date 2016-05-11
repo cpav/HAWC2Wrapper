@@ -744,7 +744,7 @@ class HAWC2SInputWriter(HAWC2InputWriter):
                                'nobladeonly %i' % opt_vt.number_of_modes)
 
             elif name == 'basic_dtu_we_controller':
-                init = self.vartrees.dlls.risoe_controller.dll_init
+                init = self.vartrees.dlls.dtu_we_controller.dll_init
 
                 cmd.append(('basic_dtu_we_controller' + 10*' %20.15e' + ' %i' +
                             3*' %20.15e') % (init.pgTorque, init.igTorque,
@@ -830,7 +830,7 @@ class HAWC2SInputWriter(HAWC2InputWriter):
     def _write_h2s_control(self):
 
         ctr = []
-        dll_init = self.vartrees.dlls.risoe_controller.dll_init
+        dll_init = self.vartrees.dlls.dtu_we_controller.dll_init
         ctr.append('begin controller_tuning')
         ctr.append('  partial_load %3.6f %3.6f' % (dll_init.poleFreqTorque,
                                                    dll_init.poleDampTorque))
@@ -861,7 +861,7 @@ class HAWC2SInputWriter(HAWC2InputWriter):
 
     def _write_h2s_operational_data(self):
 
-        dll_init = self.vartrees.dlls.risoe_controller.dll_init
+        dll_init = self.vartrees.dlls.dtu_we_controller.dll_init
         opt = []
         opt.append('operational_data_filename %s' % self.case_id + '.opt')
 
