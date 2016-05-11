@@ -179,10 +179,10 @@ class HAWC2Workflow(Component):
         if self.wrapper.success and not self.output.dry_run:
             self.output.execute(self.case)
 
-        unknowns['outputs_statistics'] = self.output.outputs_statistics
-        unknowns['outputs_fatigue'] = self.output.outputs_fatigue
-        if self.output.ch_envelope != []:
-            unknowns['outputs_envelope'] = self.output.outputs_envelope
+            unknowns['outputs_statistics'] = self.output.outputs_statistics
+            unknowns['outputs_fatigue'] = self.output.outputs_fatigue
+            if self.output.ch_envelope != []:
+                unknowns['outputs_envelope'] = self.output.outputs_envelope
 
         os.chdir(self.basedir)
 
