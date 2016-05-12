@@ -172,6 +172,11 @@ class HAWC2InputReader(object):
             else:
                 for rm in ramp:
                     vt.wind_ramp_abs.append(rm)
+                    
+        ud_shear = section.get_entry('user_defined_shear')
+        if ud_shear is not None:
+            vt.user_defined_shear = True
+            vt.shear_file = ud_shear[0]
 
         gust = section.get_entry('iec_gust')
         if gust is not None:

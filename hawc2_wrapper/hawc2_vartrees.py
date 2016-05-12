@@ -431,6 +431,8 @@ class HAWC2Wind(object):
         # 0=None,1=constant,2=logarithmic,3=power law,4=linear
         self.shear_type = 1
         self.shear_factor = 0.  # Shear parameter - depends on the shear type
+        self.user_defined_shear = False
+        self.shear_file = './data/shear/0000.dat'
         self.turb_format = 0    # Turbulence format (0=none, 1=mann, 2=flex)
         # Tower shadow model 0=none, 1=potential, 2=jet model, 3=potential_2
         self.tower_shadow_method = 0
@@ -449,9 +451,9 @@ class HAWC2Wind(object):
         self.var = ['density', 'wsp', 'tint', 'horizontal_input', 'shear_type',
                     'shear_factor', 'turb_format', 'tower_shadow_method',
                     'scale_time_start', 'wind_ramp_t0', 'wind_ramp_t1',
-                    'wind_ramp_factor0', 'wind_ramp_factor1', 'iec_gust',
-                    'iec_gust_type', 'G_A', 'G_phi0', 'G_t0', 'G_T',
-                    'wind_ramp_abs']
+                    'wind_ramp_factor0', 'wind_ramp_factor1', 'user_defined_shear',
+                    'shear_file', 'iec_gust', 'iec_gust_type', 'G_A', 'G_phi0',
+                    'G_t0', 'G_T', 'wind_ramp_abs']
 
     def add_shadow(self, shadow_name):
 

@@ -141,6 +141,12 @@ class HAWC2Workflow(Component):
             pass
 
         shutil.copytree('control', workdir+'/control')
+        
+        try:
+            shutil.copytree('data/shear', workdir+'/data/shear')
+        except:
+            pass
+        
         os.chdir(workdir)
 
         vt = self.writer.vartrees
