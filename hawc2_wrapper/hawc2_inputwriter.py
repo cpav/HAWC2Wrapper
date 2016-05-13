@@ -233,6 +233,8 @@ class HAWC2InputWriter(object):
             wind.append('wind_ramp_factor' + 4*fmt %
                         (wind_vt.wind_ramp_t0, wind_vt.wind_ramp_t1,
                          wind_vt.wind_ramp_factor0, wind_vt.wind_ramp_factor1))
+        if wind_vt.user_defined_shear:
+            wind.append('user_defined_shear %s' % wind_vt.shear_file)
 
         if wind_vt.iec_gust:
             wind.append('iec_gust %s' % wind_vt.iec_gust_type + 4*fmt %
@@ -608,6 +610,7 @@ class HAWC2InputWriter(object):
         for i in range(len(self.vartrees.output.sensor_list)):
             sns.append('  ' + self.vartrees.output.sensor_list[i])
         sns.append('end output')
+        sns.append('exit')
 
         sns = [s+';' for s in sns]
 
