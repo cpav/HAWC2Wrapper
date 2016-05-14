@@ -176,7 +176,7 @@ class HAWC2SWorkflow(Component):
 
         vt = self.writer.vartrees
         if self.with_tsr:
-            vt.dlls.risoe_controller.dll_init.designTSR = \
+            vt.dlls.dtu_we_controller.dll_init.designTSR = \
                 params['tsr']
 
         if self.with_geom:
@@ -261,16 +261,16 @@ class HAWC2SWorkflow(Component):
 
         if 'user' not in case_id:
             if isinstance(case, int) or isinstance(case, float):
-                vt.dlls.risoe_controller.dll_init.Vin = case
-                vt.dlls.risoe_controller.dll_init.Vout = case
-                vt.dlls.risoe_controller.dll_init.nV = 1
+                vt.dlls.dtu_we_controller.dll_init.Vin = case
+                vt.dlls.dtu_we_controller.dll_init.Vout = case
+                vt.dlls.dtu_we_controller.dll_init.nV = 1
                 vt.h2s.wsp_cases = np.asarray([case])
             else:
-                vt.dlls.risoe_controller.dll_init.Vin = case[0]
-                vt.dlls.risoe_controller.dll_init.Vout = case[-1]
-                vt.dlls.risoe_controller.dll_init.nV = len(case)
+                vt.dlls.dtu_we_controller.dll_init.Vin = case[0]
+                vt.dlls.dtu_we_controller.dll_init.Vout = case[-1]
+                vt.dlls.dtu_we_controller.dll_init.nV = len(case)
                 vt.h2s.wsp_cases = np.asarray(case)
-            nws = vt.dlls.risoe_controller.dll_init.nV
+            nws = vt.dlls.dtu_we_controller.dll_init.nV
 
         else:
 
