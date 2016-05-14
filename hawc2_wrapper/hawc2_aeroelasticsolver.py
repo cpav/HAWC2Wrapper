@@ -282,7 +282,7 @@ class OutputsAggregator(Component):
         if self.ch_envelope != []:
             self.envelope_var = []
             for isec in range(nsec):
-                name = 'envelope_sec%i' % isec
+                name = 'blade_loads_envelope_sec%03d' % isec
                 self.envelope_var.append(name)
                 self.add_output(name, shape=[self.Nsectors_env, 6])
 
@@ -311,11 +311,14 @@ class OutputsAggregator(Component):
                     cloud = out[:,6*self.Nrblades*j:6*self.Nrblades*(j+1)]
                     envelope_cloud[p_name] = \
                              cloud.reshape([(self.Nx_envelope+1)*self.Nrblades,6])
-                unknowns[var] = \
+                vec = \
                 Simulations.compute_env_of_env(envelope_cloud, p_list,
                                                Nx=(self.Nx_envelope + 1) *
                                                self.Nrblades - 1,
                                                Nsectors=self.Nsectors_env)
+                # swap envelope columns to get vectors with
+                # Fx Fy Fz Mx My Mz
+                unknowns[var] = vec[:, [3, 4, 5, 0, 1, 2]] * 1.e3
 
 
 class HAWC2AeroElasticSolver(Group):
@@ -328,7 +331,7 @@ class HAWC2AeroElasticSolver(Group):
         Configuration dictionary.
 
     """
-    def __init__(self, config, dlcs_folder, cssize=None, pfsize=None):
+    def __init__(self, config, dlcs_folder, dlcs_fext='xls', cssize=None, pfsize=None):
         super(HAWC2AeroElasticSolver, self).__init__()
 
         if cssize is not None:
@@ -343,7 +346,7 @@ class HAWC2AeroElasticSolver(Group):
         self._check_config(config)
 
         # load cases and their tags
-        dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext='xls', silent=True)
+        dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext=dlcs_fext, silent=True)
 
         promote = []
         if config['with_tsr']:
@@ -376,6 +379,11 @@ class HAWC2AeroElasticSolver(Group):
         for m in config['HAWC2Outputs']['m']:
             name = 'fatigue_m%i' % m
             agg_promo.append(name)
+
+        if 'ch_envelope' in config['HAWC2Outputs'].keys():
+            for isec in range(config['structural_sections']):
+                name = 'blade_loads_envelope_sec%03d' % isec
+                agg_promo.append(name)
 
         self.add('aggregate', OutputsAggregator(config, len(dlcs)),
                  promotes=agg_promo)
@@ -461,8 +469,8 @@ class HAWC2AeroElasticSolver(Group):
                                                    'max', 'range', 'absmax',
                                                    'mean']
         if 'ch_envelope' in config['HAWC2Outputs'].keys():
-            if 'Nx_envelope' not in config['HAWC2Outputs'].keys():
-                config['HAWC2Outputs']['Nx'] = 300
+            if 'Nx' not in config['HAWC2Outputs'].keys():
+                config['HAWC2Outputs']['Nx'] = 36
             if 'Nsectors' not in config['HAWC2Outputs'].keys():
                 config['HAWC2Outputs']['Nsectors'] = 12
                 print 'No sectors number defined for load envelope, proceeding' +\
