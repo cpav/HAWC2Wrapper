@@ -482,7 +482,30 @@ class HAWC2AeroElasticSolver(Group):
                 config['HAWC2Outputs']['nr_blades_out'] = 1
                 print 'No number of blades defined for output analysis, proceeding ' +\
                       'with one blade output analysis.'
-        if 'psf' not in config['HAWC2Outputs'].keys():
+        if 'psf' in config['HAWC2Outputs'].keys():
+            if config['HAWC2Outputs']['psf'] == {}:
+            print 'Partial safety factors dictionary called, but not initialized...' +\
+                  'proceeding with standard IEC values and DLC labels...'
+                config['HAWC2Outputs']['psf']['dlc12'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc13'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc14'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc15'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc21'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc22'] = 1.1
+                config['HAWC2Outputs']['psf']['dlc23'] = 1.1
+                config['HAWC2Outputs']['psf']['dlc24'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc31'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc32'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc33'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc41'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc42'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc51'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc61'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc62'] = 1.1
+                config['HAWC2Outputs']['psf']['dlc63'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc64'] = 1.35
+                config['HAWC2Outputs']['psf']['dlc81'] = 1.5
+        else:
             print 'No safety factors for load analysis considered...'
         if 'data_directory' not in config['HAWC2InputWriter'].keys():
             config['HAWC2InputWriter']['data_directory'] = 'data'
