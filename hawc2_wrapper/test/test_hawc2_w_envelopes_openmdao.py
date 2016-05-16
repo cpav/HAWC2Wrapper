@@ -88,14 +88,34 @@ for nsec in range(config['structural_sections']):
      'local-blade'+'{:01d}'.format(nrb+1)+'-node-'+'{:03d}'.format(nsec+1)+'-forcevec-y',
      'local-blade'+'{:01d}'.format(nrb+1)+'-node-'+'{:03d}'.format(nsec+1)+'-forcevec-z'])
                     
-                                                            
+cf['psf'] = {}
+cf['psf']['dlc12'] = 1.35
+cf['psf']['dlc13'] = 1.35
+cf['psf']['dlc14'] = 1.35
+cf['psf']['dlc15'] = 1.35
+cf['psf']['dlc21'] = 1.35
+cf['psf']['dlc22'] = 1.1
+cf['psf']['dlc23'] = 1.1
+cf['psf']['dlc24'] = 1.35
+cf['psf']['dlc31'] = 1.35
+cf['psf']['dlc32'] = 1.35
+cf['psf']['dlc33'] = 1.35
+cf['psf']['dlc41'] = 1.35
+cf['psf']['dlc42'] = 1.35
+cf['psf']['dlc51'] = 1.35
+cf['psf']['dlc61'] = 1.35
+cf['psf']['dlc62'] = 1.1
+cf['psf']['dlc63'] = 1.35
+cf['psf']['dlc64'] = 1.35
+cf['psf']['dlc81'] = 1.5
+
 config['HAWC2Outputs'] = cf
 
-root.add('loads', HAWC2AeroElasticSolver(config, './DLCs_longer/', None, None), promotes=['*'])
+root.add('loads', HAWC2AeroElasticSolver(config, './DLCs_longer/'), promotes=['*'])
 
 
 top.setup()
 
 top.run()
 
-#print(top.root.loads.unknowns['aggregate.envelope_sec1'])
+#print(top.root.loads.unknowns['blade_loads_envelope_sec000'])
