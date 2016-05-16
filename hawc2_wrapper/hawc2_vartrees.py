@@ -617,7 +617,7 @@ class DTUBasicControllerVT(HAWC2Type2DLLinit):
         self.minRPM = 0.0  # [rpm]
         self.maxRPM = 0.0  # [rpm]
         self.gearRatio = 0.0
-        self.designTSR = 7.5
+        self.designTSR = 0.
         self.active = True
         self.FixedPitch = False
         self.maxTorque = 15.6e6   # Maximum allowable generator torque [N*m]
@@ -684,6 +684,7 @@ class DTUBasicControllerVT(HAWC2Type2DLLinit):
                          29: ['PitchDelay1', 1.], 30: ['PitchVel1', 1.],
                          31: ['PitchDelay2', 1.], 32: ['PitchVel2', 1.],
                          45: ['overspeed_limit', 1.], 50: ['Kp2', 1.],
+                         49: ['designTSR', 1.],
                          51: ['Ko1', 1.], 52: ['Ko2', 1.]}
 
     def set_constants(self, constants):
