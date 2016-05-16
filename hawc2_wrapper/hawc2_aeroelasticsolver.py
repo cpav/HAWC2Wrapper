@@ -140,19 +140,22 @@ class HAWC2Workflow(Component):
         except:
             pass
 
-        shutil.copytree('control', workdir+'/control')
-        
+        try:
+            shutil.copytree('control', workdir+'/control')
+        except:
+            pass
+
         try:
             shutil.copytree('data/shear', workdir+'/data/shear')
         except:
             pass
-        
+
         os.chdir(workdir)
 
         vt = self.writer.vartrees
         if self.with_tsr:
-            vt.dlls.dtu_we_controller.dll_init.designTSR = \
-                params['tsr']
+            vt.dlls.dtu_we_controller.dll_init.designTSR = params['tsr']
+            vt.dlls.dtu_we_controller.dll_init.Qg = 0.
 
         if self.with_geom:
             blade_length = params['blade_length']
