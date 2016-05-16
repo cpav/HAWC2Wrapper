@@ -63,7 +63,11 @@ class HAWC2OutputBase(object):
             self.ch_envelope = config['ch_envelope']
             self.Nch_env = len(config['ch_envelope'])
             self.Nx_envelope = config['Nx']
-
+        if 'psf' not in config.keys():
+            self.psf = {}
+        else:
+            self.psf = config['psf']
+            
     def execute(self, case_tags):
 
         case_tags['[run_dir]'] = ''
@@ -79,6 +83,13 @@ class HAWC2OutputBase(object):
         if self.ch_envelope != []:
             self.envelope = case.compute_envelope(case.sig, self.ch_envelope,
                                             int_env=True, Nx=self.Nx_envelope)
+            if self.psf != {}:
+                for c in self.psf.keys():
+                    if case_tags['[case_id]'][:5] == c:
+                        for nch, ch in enumerate(self.envelope):
+                            self.envelope[ch] = self.envelope[ch]*self.psf[c]
+                    else:
+                        continue
         else:
             self.envelope = {}
 

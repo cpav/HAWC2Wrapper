@@ -476,12 +476,14 @@ class HAWC2AeroElasticSolver(Group):
                 config['HAWC2Outputs']['Nx'] = 36
             if 'Nsectors' not in config['HAWC2Outputs'].keys():
                 config['HAWC2Outputs']['Nsectors'] = 12
-                print 'No sectors number defined for load envelope, proceeding' +\
+                print 'No sectors number defined for load envelope, proceeding ' +\
                       'with the default value of 12 (30deg sector).'
             if 'nr_blades_out' not in config['HAWC2Outputs'].keys():
                 config['HAWC2Outputs']['nr_blades_out'] = 1
-                print 'No number of blades defined for output analysis, proceeding' +\
+                print 'No number of blades defined for output analysis, proceeding ' +\
                       'with one blade output analysis.'
+        if 'psf' not in config['HAWC2Outputs'].keys():
+            print 'No safety factors for load analysis considered...'
         if 'data_directory' not in config['HAWC2InputWriter'].keys():
             config['HAWC2InputWriter']['data_directory'] = 'data'
         if 'turb_directory' not in config['HAWC2InputWriter'].keys():
