@@ -43,21 +43,21 @@ class HAWC2InputReader(object):
         self.vartrees.body_order = self.dict.body_order
 
         for section in self.htc:
-            if section.name == 'simulation':
+            if section.name.lower() == 'simulation':
                 self._add_simulation(section)
-            elif section.name == 'wind':
+            elif section.name.lower() == 'wind':
                 self._add_wind(section)
-            elif section.name == 'aero':
+            elif section.name.lower() == 'aero':
                 self._add_aero(section)
-            elif section.name == 'aerodrag':
+            elif section.name.lower() == 'aerodrag':
                 self._add_aerodrag(section)
-            elif section.name == 'new_htc_structure':
+            elif section.name.lower() == 'new_htc_structure':
                 self._add_structure(section)
-            elif section.name == 'output':
+            elif section.name.lower() == 'output':
                 self._add_output(section)
-            elif section.name == 'dll':
+            elif section.name.lower() == 'dll':
                 self._add_dlls(section)
-            elif section.name == 'hawcstab2':
+            elif section.name.lower() == 'hawcstab2':
                 self._add_hawcstab2(section)
 
     def set_entry(self, vt, section, name, h2name=None, required=False):
@@ -172,7 +172,7 @@ class HAWC2InputReader(object):
             else:
                 for rm in ramp:
                     vt.wind_ramp_abs.append(rm)
-                    
+
         ud_shear = section.get_entry('user_defined_shear')
         if ud_shear is not None:
             vt.user_defined_shear = True
