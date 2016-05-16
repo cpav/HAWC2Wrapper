@@ -484,7 +484,7 @@ class HAWC2AeroElasticSolver(Group):
                       'with one blade output analysis.'
         if 'psf' in config['HAWC2Outputs'].keys():
             if config['HAWC2Outputs']['psf'] == {}:
-            print 'Partial safety factors dictionary called, but not initialized...' +\
+                print 'Partial safety factors dictionary called, but not initialized...' +\
                   'proceeding with standard IEC values and DLC labels...'
                 config['HAWC2Outputs']['psf']['dlc12'] = 1.35
                 config['HAWC2Outputs']['psf']['dlc13'] = 1.35
