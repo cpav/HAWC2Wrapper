@@ -429,6 +429,7 @@ class HAWC2InputWriter(object):
                 main_body.append('  FPM %d' % body.st_input_type)
             main_body.append('  set %d %d' % tuple(body.body_set))
             main_body.append('end timoschenko_input')
+            main_body.append('gravity '+ fmt % body.gravity)
             main_body.append('begin c2_def')
             main_body.append('  nsec %i' % body.c12axis.shape[0])
             for i in range(body.c12axis.shape[0]):
@@ -567,8 +568,11 @@ class HAWC2InputWriter(object):
         dll.append('begin init')
 
         for i in range(len(dll_init.init_dic.keys())):
-            val = getattr(dll_init,
-                          dll_init.init_dic[i+1][0])/dll_init.init_dic[i+1][1]
+            try:
+                val = getattr(dll_init,
+                              dll_init.init_dic[i+1][0])/dll_init.init_dic[i+1][1]
+            except:
+                val = 0.
             dll.append('  constant ' + fmt % (i+1, val))
 
         dll.append('end init')

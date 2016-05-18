@@ -229,9 +229,10 @@ class HAWC2MainBody(object):
         self.concentrated_mass = []
         self.orientations = []
         self.constraints = []
+        self.gravity = 9.81
         self.var = ['body_name', 'body_type', 'st_input_type',
                     'body_set', 'nbodies', 'node_distribution',
-                    'damping_posdef', 'damping_aniso','concentrated_mass']
+                    'damping_posdef', 'damping_aniso','concentrated_mass', 'gravity']
 
     def add_orientation(self, orientation):
         if orientation == 'base':
@@ -705,7 +706,7 @@ type2_dll_dict = {'dtu_we_controller': DTUBasicControllerVT,
                   'generator_servo': HAWC2Type2DLLinit,
                   'mech_brake': HAWC2Type2DLLinit,
                   'servo_with_limits': HAWC2Type2DLLinit,
-                  'disttowtip': HAWC2Type2DLLinit}
+                  'towerclearance': HAWC2Type2DLLinit}
 
 
 class HAWC2SCommandsOpt(object):
