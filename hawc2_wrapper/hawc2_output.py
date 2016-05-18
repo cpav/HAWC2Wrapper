@@ -74,7 +74,8 @@ class HAWC2OutputBase(object):
         case = Simulations.Cases(case_tags)
         case.load_result_file(case_tags)
         self.ch_dict = case.res.ch_dict
-        self.stats = case.res.calc_stats(case.sig, i0=0, i1=None)
+        self.stats = case.res.calc_stats(case.sig, i0=0, i1=None, ks=True)
+        self.case = case
         self.eq = []
         for s in case.sig.T:
             self.eq.append(case.res.calc_fatigue(s, no_bins=self.no_bins,

@@ -470,7 +470,7 @@ class HAWC2AeroElasticSolver(Group):
         if 'stat_list' not in config['HAWC2Outputs'].keys():
             config['HAWC2Outputs']['stat_list'] = ['std', 'rms', 'min', 'int',
                                                    'max', 'range', 'absmax',
-                                                   'mean']
+                                                   'mean', 'min_ks', 'max_ks']
         if 'ch_envelope' in config['HAWC2Outputs'].keys():
             if 'Nx' not in config['HAWC2Outputs'].keys():
                 config['HAWC2Outputs']['Nx'] = 36
