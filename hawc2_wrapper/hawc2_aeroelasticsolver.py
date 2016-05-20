@@ -350,6 +350,7 @@ class HAWC2AeroElasticSolver(Group):
 
         # load cases and their tags
         dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext=dlcs_fext, silent=True)
+        self.ncases = len(dlcs)
 
         promote = []
         if config['with_tsr']:
