@@ -291,16 +291,17 @@ class OutputsAggregator(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        for j, var in enumerate(self.stat_var):
-            for i in range(self.n_cases):
-                p_name = 'outputs_statistics_%d' % i
-                out = params[p_name]
+        for i in range(self.n_cases):
+            p_name = 'outputs_statistics_%d' % i
+            out = params[p_name]
+            for j, var in enumerate(self.stat_var):
                 unknowns[var][i, :] = out[j, :]
 
-        for j, var in enumerate(self.fatigue_var):
-            for i in range(self.n_cases):
-                p_name = 'outputs_fatigue_%d' % i
-                out = params[p_name]
+
+        for i in range(self.n_cases):
+            p_name = 'outputs_fatigue_%d' % i
+            out = params[p_name]
+            for j, var in enumerate(self.fatigue_var):
                 unknowns[var][i, :] = out[j, :]
 
         if self.ch_envelope != []:
@@ -351,6 +352,8 @@ class HAWC2AeroElasticSolver(Group):
         # load cases and their tags
         dlcs = dlcdefs.excel_stabcon(dlcs_folder, fext=dlcs_fext, silent=True)
         self.ncases = len(dlcs)
+        if self.ncases == 0:
+            raise RuntimeError('Something went wrong when reading the DLCs, ncases=0!')
 
         promote = []
         if config['with_tsr']:
