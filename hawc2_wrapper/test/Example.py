@@ -26,17 +26,18 @@ class NormalizeDesVar(Component):
 
         nsec_st = init_blade_beam_structure.shape[0]
 
-        self.init_blade_beam_structure = init_blade_beam_structure
+        self.init_blade_beam_structure = init_blade_beam_structure.copy()
         self.add_param('Ixnorm', val=np.zeros(nsec_st))
         self.add_param('Iynorm', val=np.zeros(nsec_st))
         self.add_output('blade_beam_structure', shape=(nsec_st, 19))
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        blade_beam_structure = self.init_blade_beam_structure
-
-        blade_beam_structure[:, 10] *= 1.+params['Ixnorm']
-        blade_beam_structure[:, 11] *= 1.+params['Iynorm']
+        blade_beam_structure = self.init_blade_beam_structure.copy()
+        print 'Ixnorm', params['Ixnorm']
+        print 'Iynorm', params['Iynorm']
+        blade_beam_structure[:, 10] *= (1.+params['Ixnorm'])
+        blade_beam_structure[:, 11] *= (1.+params['Iynorm'])
 
         unknowns['blade_beam_structure'] = blade_beam_structure
 
@@ -129,7 +130,7 @@ def setup_init_structure(n):
 
 
 def set_top(optimize_flag):
-    par_fd = 1
+    par_fd = 5
 
     if optimize_flag:
         top = Problem(impl=impl, root=ParallelFDGroup(par_fd))
@@ -139,10 +140,15 @@ def set_top(optimize_flag):
     # Set the Driver
     top.driver = ScipyOptimizer()
     top.driver.options['optimizer'] = 'SLSQP'
-    top.driver.options['tol'] = 1.0e-8
-
+    top.driver.options['tol'] = 1.0e-5
+    # from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+    # top.driver = pyOptSparseDriver()
+    # top.driver.options['optimizer'] = 'IPOPT'
+    # top.driver.opt_settings['mu_strategy'] = 'adaptive'
+    # top.driver.opt_settings['linear_solver'] = 'ma27'
+    # top.driver.opt_settings['max_iter'] = 40
+    # top.driver.opt_settings['tol'] = 1.e-5
     # Some options and parameters
-    top.root.ln_solver = LinearGaussSeidel()
     top.root.fd_options['force_fd'] = True
     top.root.fd_options['step_size'] = 1.e-3
     return top
@@ -172,7 +178,7 @@ def example_blade_tip_target():
     # Add cost function
     top.driver.add_objective('cf')
     # Add design variable
-    top.driver.add_desvar('Iynorm', lower=-0.1, upper=0.2)
+    top.driver.add_desvar('Ixnorm', lower=-0.2, upper=0.2)
     return top
 
 
@@ -206,7 +212,7 @@ def example_frequency_placement():
     # Add cost function
     top.driver.add_objective('cf')
     # Add design variable
-    top.driver.add_desvar('Ixnorm', lower=-0.1, upper=0.2)
+    top.driver.add_desvar('Iynorm', lower=-0.4, upper=0.4)
     return top
 
 # SELECT HERE THE EXAMPLE TO RUN
